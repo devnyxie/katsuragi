@@ -1,32 +1,12 @@
 A small, fast, and highly configurable Go package to fetch Favicon URLs from a given URL.
 
-<!--ts-->
-
-- [Features](#features)
-- [Options Overview](#options-overview)
-  - [Concurrency](#concurrency)
-  - [MaxGoRoutines](#maxgoroutines)
-  - [UserAgent](#useragent)
-  - [Validate](#validate)
-  - [MaxDepth](#maxdepth)
-  - [Timeout](#timeout)
-  - [ReturnFirst](#returnfirst)
-  - [Quality](#quality)
-  - [Binary](#binary)
-
-<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
-<!-- Added by: devnyxie, at: Thu Jul 11 06:51:42 PM CEST 2024 -->
-
-<!--te-->
-
 ## Features
 
 - Concurrency 🔀
 - Validation ✅
 - Advanced Search 🔍
-- Custom UserAgent 🕵️‍♂️
-- Timeout ⏰
-- and more!
+- Custom UserAgent 👥
+- ...and more!
 
 ## Options Overview
 
