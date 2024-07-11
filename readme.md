@@ -2,79 +2,142 @@
 
 A small, fast, and highly configurable Go package to fetch Favicon URLs from a given URL.
 
+<!-- START doctoc -->
+<!-- END doctoc -->
+
+<!--ts-->
+<!--te-->
+
 ## Features
 
 - **Concurrency** 🔀
 - **Validation** ✅
 - **Advanced Search** 🔍
-- **UserAgent** 🕵️‍♂️
+- **Custom UserAgent** 🕵️‍♂️
 - **Timeout** ⏰
 - and more!
 
-## Documentation
+## Options Overview
 
-### Options Overview
+<details>
+  <summary><h3>Concurrency</h3></summary>
 
-- **Concurrency**: `boolean` (default: `false`)
+Type: `boolean`
 
-  - Enable or disable concurrent batch fetching.
-    > ⚠️ Enabling concurrency can increase CPU and memory usage because multiple threads or goroutines are active simultaneously. Simultaneous network requests can increase bandwidth usage, potentially leading to throttling or rate limiting by the server.
+Default: `false`
 
-- **MaxGoRoutines**: `number` (default: `-1` (no limit))
+Enable or disable concurrent batch fetching.
 
-  - Set the maximum number of concurrent goroutines. This allows for fine-tuning the concurrency level for performance optimization and resource management. The value is set using the [SetLimit](https://pkg.go.dev/golang.org/x/sync/errgroup#Group.SetLimit) method.
+> ⚠️ Enabling concurrency can increase CPU and memory usage because multiple threads or goroutines are active simultaneously. Simultaneous network requests can increase bandwidth usage, potentially leading to throttling or rate limiting by the server.
 
-- **UserAgent**: `string` (default: `""`)
+</details>
 
-  - Specify custom User-Agent headers for requests, which can help avoid server rate limiting and blocking mechanisms.
+<details>
+  <summary><h3>MaxGoRoutines</h3></summary>
 
-- **Validate**: `boolean` (default: `false`)
+Type: `number`
 
-  - Validate the favicon URL to ensure it's reachable.
+Default: `-1` (no limit)
 
-- **maxDepth**: `number` (default: `1`)
+Requirements:
 
-  - Specify the depth level to stop fetching favicons:
-    - 🟢 `1`: Parsing HTML homepage & checking for favicon rel tags (fast)
-    - 🟡 `2`: Sending requests for common root and "/public" locations (mediocre)
-    - 🔴 `3`: Checking, parsing, and searching for favicons in Web App Manifests (slow)
+- Concurrency: `true`
 
-- **Timeout**: `number` (default: `5000`)
+Set the maximum number of concurrent goroutines. This allows for fine-tuning the concurrency level for performance optimization and resource management. The value is set using the [SetLimit](https://pkg.go.dev/golang.org/x/sync/errgroup#Group.SetLimit) method.
 
-  - Set a timeout (in milliseconds) for fetching favicon URLs.
+</details>
 
-- **ReturnFirst**: `boolean` (default: `false`)
+<details>
+  <summary><h3>UserAgent</h3></summary>
 
-  - When enabled (`true`), only the first favicon found will be returned.
+Type: `string`
 
-- **Quality**: `string` (default: `""`, values: `High`, `Low`)
+Default: `""`
 
-  > ⚠️ The quality will be determined by the file extension. E.g., `favicon.ico` will be considered `Low` quality, and `favicon.png` will be considered `High` quality.
+Specify custom User-Agent headers for requests, which can help avoid server rate limiting and blocking mechanisms.
 
-  1. High:
+</details>
 
-  - `png`
-  - `webp`
-  - `svg`
+<details>
+  <summary><h3>Validate</h3></summary>
 
-  2. Medium:
+Type: `boolean`
 
-  - `jpg`
-  - `jpeg`
+Default: `false`
 
-  3.  Low:
+Validate the favicon URL to ensure it's reachable.
 
-  - `ico`
+</details>
 
-  > **Why we are not using the size or resolution to determine the quality?** <br/>
-  > Because the size or resolution of the favicon is not always a good indicator of its quality. Furthermore, we would have to download the image to determine its size or resolution, which would be inefficient.
+<details>
+  <summary><h3>MaxDepth</h3></summary>
 
-  > 💡 Please read the specification below before using this option, as the **ReturnFirst** option plays a crucial role here.
+Type: `number`
 
-  - **ReturnFirst** disabled (false): Sorts the slice of favicons based on their quality. E.g., `High` will return the highest quality favicons first, and `Low` will return the lowest quality favicons first.
-  - **ReturnFirst** enabled (true) AND **Concurrency** is enabled (true): Fetches all favicons concurrently and returns one favicon of the `highest`/`lowest` quality.
-    > if Concurrency is disabled and ReturnFirst is enabled, the function will consider this option as `""` (no quality selected).
+Default: `2`
 
-- **Binary**: `boolean` (default: `false`)
+Specify the depth level to stop fetching favicons:
 
-  - Works only when **ReturnFirst** is enabled. When enabled (`true`), the function returns the raw binary data of the image instead of its URL.
+    🟢 1: Parsing HTML homepage & checking for favicon rel tags (fast)
+    🟡 2: Sending requests for common root and "/public" locations (mediocre)
+    🔴 3: Checking, parsing, and searching for favicons in Web App Manifests (slow)
+
+</details>
+
+<details>
+  <summary><h3>Timeout</h3></summary>
+
+Type: `number`
+
+Default: `5000`
+
+Set a timeout (in milliseconds) for fetching favicon URLs.
+
+</details>
+
+<details>
+  <summary><h3>ReturnFirst</h3></summary>
+
+Type: `boolean`
+
+Default: `false`
+
+When enabled (true), only the first favicon found will be returned.
+
+</details>
+
+<details>
+  <summary><h3>Quality</h3></summary>
+
+Type: `number`
+
+Default: `3`
+
+Requirements:
+
+- ReturnFirst: `false`
+
+Values:
+
+1. Low
+2. Medium
+3. High
+
+Sorts the slice of favicons based on their quality. E.g., `3` will return the highest quality favicons first.
+
+</details>
+
+<details>
+  <summary><h3>Binary</h3></summary>
+
+Type: `boolean`
+
+Default: `false`
+
+Requirements:
+
+- ReturnFirst: `true`
+
+Works only when ReturnFirst is enabled. When enabled (true), the function returns the raw binary data of the image instead of its URL.
+
+</details>
