@@ -4,6 +4,7 @@ A small, fast, and highly configurable Go package to fetch Favicon URLs from a g
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Features](#features)
@@ -20,16 +21,13 @@ A small, fast, and highly configurable Go package to fetch Favicon URLs from a g
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-<!--ts-->
-<!--te-->
-
 ## Features
 
-- **Concurrency** 🔀
-- **Validation** ✅
-- **Advanced Search** 🔍
-- **Custom UserAgent** 🕵️‍♂️
-- **Timeout** ⏰
+- Concurrency 🔀
+- Validation ✅
+- Advanced Search 🔍
+- Custom UserAgent 🕵️‍♂️
+- Timeout ⏰
 - and more!
 
 ## Options Overview
