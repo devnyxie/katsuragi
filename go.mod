@@ -1,3 +1,3 @@
-module github.com/devnyxie/favigo
+module github.com/devnyxie/favijaeger
 
 go 1.22.0

@@ -6,7 +6,7 @@ A small, fast, and highly configurable Go package to fetch Favicon URLs from a g
 - Validation ✅
 - Advanced Search 🔍
 - Custom UserAgent 👥
-- ...and more!
+- and more!
 
 ## Options Overview
 

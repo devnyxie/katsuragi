@@ -19,11 +19,22 @@ func FetchFavicons(url string, options Options) ([]string, error) {
 	client := &http.Client{}
 
 	commonLocations := []string{
-		"/favicon.ico",
+		"android-chrome-48x48.png",
+		"android-chrome-192x192.png",
+		"android-chrome-512x512.png",
+		"apple-touch-icon.png",
+		"favicon-16x16.png",
+		"favicon-32x32.png",
+		"favicon-96x96.png",
+		"favicon-196x196.png",
+		"favicon.ico",
+		"mstile-150x150.png",
+		"safari-pinned-tab.svg",
 	}
+
 	foundFavicons := []string{}
 	for i := 0; i < len(commonLocations); i++ {
-		urlToGet := url + commonLocations[i]
+		urlToGet := url + "/" + commonLocations[i]
 		req, httpErr := http.NewRequest("GET", urlToGet, nil)
 		if httpErr != nil {
 			return nil, httpErr
