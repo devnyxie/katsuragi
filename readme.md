@@ -2,8 +2,23 @@
 
 A small, fast, and highly configurable Go package to fetch Favicon URLs from a given URL.
 
-<!-- START doctoc -->
-<!-- END doctoc -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [Features](#features)
+  - [Concurrency](#concurrency)
+- [Options Overview](#options-overview)
+  - [MaxGoRoutines](#maxgoroutines)
+  - [UserAgent](#useragent)
+  - [Validate](#validate)
+  - [MaxDepth](#maxdepth)
+  - [Timeout](#timeout)
+  - [ReturnFirst](#returnfirst)
+  - [Quality](#quality)
+  - [Binary](#binary)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 <!--ts-->
 <!--te-->
