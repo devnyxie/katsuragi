@@ -1,6 +1,6 @@
 A small, fast, and highly configurable Go package to fetch Favicon URLs from a given URL.
 
-## Features
+# Features
 
 - Concurrency 🔀
 - Validation ✅
@@ -8,7 +8,7 @@ A small, fast, and highly configurable Go package to fetch Favicon URLs from a g
 - Custom UserAgent 👥
 - and more!
 
-## Options Overview
+# Options Overview
 
 <details>
   <summary><h3>Concurrency</h3></summary>
@@ -132,3 +132,11 @@ Requirements:
 Works only when ReturnFirst is enabled. When enabled (true), the function returns the raw binary data of the image instead of its URL.
 
 </details>
+
+# Local Development
+
+## Testing
+
+```bash
+go test -v
+```

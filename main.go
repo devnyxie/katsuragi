@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -43,13 +42,11 @@ func FetchFavicons(url string, options Options) ([]string, error) {
 		if clientErr != nil {
 			return nil, clientErr
 		}
-		fmt.Println(resp.StatusCode)
 		if resp.StatusCode == 200 {
 			foundFavicons = append(foundFavicons, urlToGet)
 		}
 		defer resp.Body.Close()
 	}
 
-	fmt.Println("Final slice of favicons:", foundFavicons)
 	return foundFavicons, nil
 }
