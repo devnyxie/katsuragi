@@ -18,6 +18,12 @@ type FaviconOptions struct {
 type Fetcher struct {
 	Concurrency	     bool
 	UserAgent  	 	 string
-    cache	 map[string]*html.Node // cache:str x str object
+    cache	 LastCachedResponse // cache:str x str object
     mu 			     sync.Mutex 	// mutex for concurrent access to cache
+}
+
+
+type LastCachedResponse struct {
+	url string
+	response *html.Node
 }

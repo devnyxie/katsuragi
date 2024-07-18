@@ -10,17 +10,17 @@ import (
 
 // --- Generic utils ---
 func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
-	// if the URL is not the same as the last URL in the cache, clear the cache
-	// ---
-	// ---
-	// try to get the result from the cache
 	f.mu.Lock() // Lock the mutex
-	cachedHtml, found := f.cache[url]
-	f.mu.Unlock() // Unlock the mutex
 	// return if found
-	if found {
+	if f.cache.url == url {
+		cachedHtml := f.cache.response
 		return cachedHtml, nil
+	} else {
+		// reset the cache if the URL is different
+		f.cache = LastCachedResponse{}
 	}
+	f.mu.Unlock() // Unlock the mutex
+
 	// if not found, make a request to the URL
 	httpResp, err := http.Get(url)
 	if err != nil {
@@ -37,7 +37,7 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
 
 	// Store the result in the cache
 	f.mu.Lock() // Lock the mutex
-	f.cache[url] = doc
+	f.cache = LastCachedResponse{url, doc}
 	f.mu.Unlock() // Unlock the mutex
 
 	// return the result

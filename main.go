@@ -2,13 +2,11 @@ package katsuragi
 
 import (
 	"fmt"
-
-	"golang.org/x/net/html"
 )
 
 func NewFetcher() *Fetcher {
     return &Fetcher {
-        cache: make(map[string]*html.Node),
+        cache: LastCachedResponse{},
     }
 }
 
@@ -21,7 +19,7 @@ func (f *Fetcher) GetFavicon(url string) (string, error) {
 
 // close the Fetcher (empty the cache)
 func (f *Fetcher) Close() {
-	f.cache = nil
+	f.cache = LastCachedResponse{}
 }
 
 
