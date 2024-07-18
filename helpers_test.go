@@ -1,4 +1,6 @@
-package favijaeger
+package katsuragi
+
+// Here are defined all required utils for the tests.
 
 import (
 	"net/http"
@@ -7,31 +9,7 @@ import (
 	"testing"
 )
 
-func TestFetchFavicons(t *testing.T) {
-	mockServer := MockServer(t)
-	defer mockServer.Close()
-
-	options := Options{
-		Concurrency: false,
-		Validate:    true,
-		MaxDepth:    2,
-		ReturnType:  "first",
-	}
-
-	favicons, err := FetchFavicons(mockServer.URL, options)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	t.Logf("Found favicons: %d", len(favicons))
-
-	if len(favicons) == 0 {
-		t.Fatalf("Expected to find favicons, got none")
-	}
-}
-
-func MockServer(t *testing.T) *httptest.Server {
+func MockServer(t *testing.T, htmlTemplate string) *httptest.Server {
 	// get all filenames from testdata/favicons and store them in faviconsFilenames
 	faviconsFilenames := []string{}
 	faviconsDir, err := os.ReadDir("testdata/favicons")
@@ -55,13 +33,9 @@ func MockServer(t *testing.T) *httptest.Server {
 			filename := faviconsFilenames[faviconIndex]
 			serveImage(w, filename, t)
 		} else if r.URL.Path == "/" {
-			htmlData, err := os.ReadFile("testdata/template.html")
-			if err != nil {
-				t.Error("Failed to read HTML template:", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			w.Write(htmlData)
+			w.Header().Set("Content-Type", "text/html")
+			html := []byte(htmlTemplate)
+			w.Write(html)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("Not Found"))
