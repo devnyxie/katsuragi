@@ -14,8 +14,8 @@ func TestGetTitle_ValidURL(t *testing.T) {
 	mockServer := MockServer(t, string(htmlTemplate))
 	defer mockServer.Close()
 
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	
 	_, err = f.GetTitle(mockServer.URL)
 
@@ -26,8 +26,8 @@ func TestGetTitle_ValidURL(t *testing.T) {
 
 // invalid URL
 func TestGetTitle_InvalidURL(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	_, err := f.GetTitle("http://localhost:1234")
 	if err != nil {
         // expected error
@@ -56,8 +56,8 @@ func TestGetTitle_TitleTag(t *testing.T) {
 	mockServer := MockServer(t, htmlTemplate)
 	defer mockServer.Close()
 
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	
 	title, err := f.GetTitle(mockServer.URL)
 
@@ -84,8 +84,8 @@ func TestGetTitle_MetaNameTitle(t *testing.T) {
 	mockServer := MockServer(t, htmlTemplate)
 	defer mockServer.Close()
 
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	
 	title, err := f.GetTitle(mockServer.URL)
 
@@ -112,8 +112,8 @@ func TestGetTitle_MetaPropertyTitle(t *testing.T) {
 	mockServer := MockServer(t, htmlTemplate)
 	defer mockServer.Close()
 
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	
 	title, err := f.GetTitle(mockServer.URL)
 
@@ -140,8 +140,8 @@ func TestGetTitle_BadHTML(t *testing.T) {
 	mockServer := MockServer(t, htmlTemplate)
 	defer mockServer.Close()
 
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	
 	_, err := f.GetTitle(mockServer.URL)
 
@@ -172,8 +172,8 @@ func TestGetTitle_EmptyTitle(t *testing.T) {
 	mockServer := MockServer(t, htmlTemplate)
 	defer mockServer.Close()
 
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	
 	_, err := f.GetTitle(mockServer.URL)
 

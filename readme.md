@@ -1,137 +1,39 @@
-A small, fast, and highly configurable Go package to fetch Favicon URLs from a given URL.
+A Go toolkit for web content processing, analysis, and SEO optimization, offering utilities to efficiently extract titles, descriptions and favicons.
 
 # Features
 
-- Concurrency 🔀
-- Validation ✅
-- Advanced Search 🔍
-- Custom UserAgent 👥
-- and more!
+- Configurable Caching
+- Timeout
+- User-Agent
 
-# Options Overview
+# Installation
 
-<details>
-  <summary><h3>Concurrency</h3></summary>
+```bash
+go get github.com/devnyxie/katsuragi
+```
 
-Type: `boolean`
+# Usage
 
-Default: `false`
+```go
+import (
+	. "katsuragi"
+)
 
-Enable or disable concurrent batch fetching.
+func main() {
+  // Create a new fetcher with a timeout of 3 seconds and a cache capacity of 10
+  fetcher := NewFetcher(
+    &FetcherProps{
+      Timeout:       3000, // 3 seconds
+      CacheCap: 10, // 10 Network Requests will be cached
+    },
+  )
 
-> ⚠️ Enabling concurrency can increase CPU and memory usage. Simultaneous network requests can lead to rate limiting by the server.
+  defer fetcher.ClearCache()
 
-</details>
-
-<details>
-  <summary><h3>MaxGoRoutines</h3></summary>
-
-Type: `number`
-
-Default: `-1` (no limit)
-
-Requirements:
-
-- Concurrency: `true`
-
-Set the maximum number of concurrent goroutines. This allows for fine-tuning the concurrency level for performance optimization and resource management. The value is set using the [SetLimit](https://pkg.go.dev/golang.org/x/sync/errgroup#Group.SetLimit) method.
-
-</details>
-
-<details>
-  <summary><h3>UserAgent</h3></summary>
-
-Type: `string`
-
-Default: `""`
-
-Specify custom User-Agent headers for requests, which can help avoid server rate limiting and blocking mechanisms.
-
-</details>
-
-<details>
-  <summary><h3>Validate</h3></summary>
-
-Type: `boolean`
-
-Default: `false`
-
-Validate the favicon URL to ensure it's reachable.
-
-</details>
-
-<details>
-  <summary><h3>MaxDepth</h3></summary>
-
-Type: `number`
-
-Default: `2`
-
-Specify the depth level to stop fetching favicons:
-
-    🟢 1: Parsing HTML homepage & checking for favicon rel tags (fast)
-    🟡 2: Sending requests for common root and "/public" locations (mediocre)
-    🔴 3: Checking, parsing, and searching for favicons in Web App Manifests (slow)
-
-</details>
-
-<details>
-  <summary><h3>Timeout</h3></summary>
-
-Type: `number`
-
-Default: `5000`
-
-Set a timeout (in milliseconds) for fetching favicon URLs.
-
-</details>
-
-<details>
-  <summary><h3>ReturnFirst</h3></summary>
-
-Type: `boolean`
-
-Default: `false`
-
-When enabled (true), only the first favicon found will be returned.
-
-</details>
-
-<details>
-  <summary><h3>Quality</h3></summary>
-
-Type: `number`
-
-Default: `3`
-
-Requirements:
-
-- ReturnFirst: `false`
-
-Values:
-
-1. Low
-2. Medium
-3. High
-
-Sorts the slice of favicons based on their quality. E.g., `3` will return the highest quality favicons first.
-
-</details>
-
-<details>
-  <summary><h3>Binary</h3></summary>
-
-Type: `boolean`
-
-Default: `false`
-
-Requirements:
-
-- ReturnFirst: `true`
-
-Works only when ReturnFirst is enabled. When enabled (true), the function returns the raw binary data of the image instead of its URL.
-
-</details>
+  // Get website's description
+  description, err := fetcher.GetDescription("https://www.example.com")
+}
+```
 
 # Local Development
 
