@@ -16,7 +16,7 @@ go get github.com/devnyxie/katsuragi
 
 ```go
 import (
-	. "katsuragi"
+	. "github.com/devnyxie/katsuragi"
 )
 
 func main() {
