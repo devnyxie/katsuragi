@@ -19,7 +19,7 @@ Default: `false`
 
 Enable or disable concurrent batch fetching.
 
-> ⚠️ Enabling concurrency can increase CPU and memory usage because multiple threads or goroutines are active simultaneously. Simultaneous network requests can increase bandwidth usage, potentially leading to throttling or rate limiting by the server.
+> ⚠️ Enabling concurrency can increase CPU and memory usage. Simultaneous network requests can lead to rate limiting by the server.
 
 </details>
 
