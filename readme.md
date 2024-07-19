@@ -30,8 +30,8 @@ func main() {
 
   defer fetcher.ClearCache()
 
-  // Get website's description
-  description, err := fetcher.GetDescription("https://www.example.com")
+  // Get website's title
+  title, err := fetcher.GeTitle("https://www.example.com")
 }
 ```
 
