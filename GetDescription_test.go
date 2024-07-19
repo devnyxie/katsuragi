@@ -7,8 +7,8 @@ import (
 
 // valid URL
 func TestGetDescription_ValidURL(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 
 	description := "Example Description"
 	htmlTemplate := fmt.Sprintf(`
@@ -36,8 +36,8 @@ func TestGetDescription_ValidURL(t *testing.T) {
 
 // invalid URL
 func TestGetDescription_InvalidURL(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 
 	_, err := f.GetDescription("http://localhost:1234")
 	if err != nil {
@@ -54,8 +54,8 @@ func TestGetDescription_InvalidURL(t *testing.T) {
 
 // empty HTML template
 func TestGetDescription_BadHTML(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 
 	htmlTemplate := `
 	<!DOCTYPE html>
@@ -83,8 +83,8 @@ func TestGetDescription_BadHTML(t *testing.T) {
 
 // empty description
 func TestGetDescription_EmptyDescription(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 
 	htmlTemplate := `
 	<!DOCTYPE html>
@@ -115,8 +115,8 @@ func TestGetDescription_EmptyDescription(t *testing.T) {
 
 // <description> tag
 func TestGetDescription_DescriptionTag(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	htmlTemplate := `
 	<!DOCTYPE html>
 	<html>
@@ -144,8 +144,8 @@ func TestGetDescription_DescriptionTag(t *testing.T) {
 
 // <meta name="description" content="">
 func TestGetDescription_MetaNameDescription(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	htmlTemplate := `
 	<!DOCTYPE html>
 	<html>
@@ -172,8 +172,8 @@ func TestGetDescription_MetaNameDescription(t *testing.T) {
 
 // <meta property="og:description" content="">
 func TestGetDescription_MetaPropertyDescription(t *testing.T) {
-	f := NewFetcher()
-	defer f.Close() // empty the cache
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache() // empty the cache
 	htmlTemplate := `
 	<!DOCTYPE html>
 	<html>

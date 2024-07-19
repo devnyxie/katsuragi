@@ -4,45 +4,53 @@ import (
 	"fmt"
 	"net/http"
 	Url "net/url"
+	"time"
 
 	"golang.org/x/net/html"
 )
 
 // --- Generic utils ---
 func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
-	f.mu.Lock() // Lock the mutex
-	// return if found
-	if f.cache.url == url {
-		cachedHtml := f.cache.response
-		return cachedHtml, nil
-	} else {
-		// reset the cache if the URL is different
-		f.cache = LastCachedResponse{}
-	}
-	f.mu.Unlock() // Unlock the mutex
+    cachedValue, found, cachedErr := f.GetFromCache(url)
+    if found {
+        fmt.Println("cached value found, url:", url)
+        if cachedErr != nil {
+            return nil, cachedErr
+        }
+        return cachedValue, nil
+    }
+    fmt.Println("cached value not found, url:", url)
 
-	// if not found, make a request to the URL
-	httpResp, err := http.Get(url)
-	if err != nil {
-		return &html.Node{}, fmt.Errorf("retrieveHTML could not reach the URL: %v", err)
-	}
-	defer httpResp.Body.Close() // Ensure the response body is closed to prevent memory leaks after the function returns
-	if httpResp.StatusCode != http.StatusOK {
-		return &html.Node{}, fmt.Errorf("retrieveHTML failed to fetch URL. HTTP Status: %v", httpResp.Status)
-	}
-	doc, err := html.Parse(httpResp.Body)
-	if err != nil {
-		return &html.Node{}, fmt.Errorf("retrieveHTML failed to parse HTML: %v", err)
-	}
+    timeout := time.Duration(f.props.Timeout) * time.Millisecond
+    client := http.Client{
+        Timeout: timeout,
+    }
 
-	// Store the result in the cache
-	f.mu.Lock() // Lock the mutex
-	f.cache = LastCachedResponse{url, doc}
-	f.mu.Unlock() // Unlock the mutex
+    httpResp, err := client.Get(url)
+    if err != nil {
+        cacheErr := fmt.Errorf("retrieveHTML could not reach the URL: %v", err)
+        f.addToCache(url, nil, cacheErr)
+        return nil, cacheErr
+    }
+    defer httpResp.Body.Close()
 
-	// return the result
-	return doc, nil
+    if httpResp.StatusCode != http.StatusOK {
+        cacheErr := fmt.Errorf("retrieveHTML failed to fetch URL. HTTP Status: %v", httpResp.Status)
+        f.addToCache(url, nil, cacheErr)
+        return nil, cacheErr
+    }
+
+    doc, err := html.Parse(httpResp.Body)
+    if err != nil {
+        cacheErr := fmt.Errorf("retrieveHTML failed to parse HTML: %v", err)
+        f.addToCache(url, nil, cacheErr)
+        return nil, cacheErr
+    }
+
+    f.addToCache(url, doc, nil)
+    return doc, nil
 }
+
 func validateURL(url string) bool {
 	_, err := Url.Parse(url)
 	return err == nil
