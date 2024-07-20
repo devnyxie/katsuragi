@@ -1,4 +1,38 @@
-- name: Upload coverage reports to Codecov
-  uses: codecov/codecov-action@v4.0.1
-  with:
-    token: ${{ secrets.CODECOV_TOKEN }}
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: cachedDependencies/go.sum
+
+      - name: Install dependencies
+        run: go get .
+
+      - name: Run tests
+        run: go test -v ./... -coverprofile=coverage.out
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-go-example
+          fail_ci_if_error: true
