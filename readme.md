@@ -16,6 +16,7 @@ A Go toolkit for web content processing, analysis, and SEO optimization, offerin
   - [Favicons](#favicons)
 - [Local Development](#local-development)
   - [Testing](#testing)
+- [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
