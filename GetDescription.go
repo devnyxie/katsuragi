@@ -23,30 +23,33 @@ func (f *Fetcher) GetDescription(url string) (string, error) {
     return description, nil
 }
 
-// traverseAndExtractDescription traverses the HTML node and extracts the description of the webpage
+// Predefined sets of valid `name` and `property` values
+var validDescriptionMeta = map[string]bool{
+    "description":       true,
+    "twitter:description": true,
+    "og:description":    true,
+}
+
+// traverseAndExtractDescription traverses the HTML node tree and extracts description content
 func traverseAndExtractDescription(n *html.Node) (string, bool) {
-	if n.Type == html.ElementNode && n.Data == "meta" {
-		var name, property, content string
-		for _, attr := range n.Attr {
-			switch attr.Key {
-			case "name":
-				name = attr.Val
-			case "property":
-				property = attr.Val
-			case "content":
-				content = attr.Val
-			}
-		}
-		if (name == "description" || name == "twitter:description" || property == "og:description" ) && content != "" {
-			return content, true
-		}
-	}
+    if n.Type == html.ElementNode && n.Data == "meta" && n.Parent.Data == "head" {
+        attrMap := extractAttributes(n.Attr) // Extract attributes to map
+        if name, found := attrMap["name"]; found && validDescriptionMeta[name] {
+            if content, found := attrMap["content"]; found && content != "" {
+                return content, true
+            }
+        } else if property, found := attrMap["property"]; found && validDescriptionMeta[property] {
+            if content, found := attrMap["content"]; found && content != "" {
+                return content, true
+            }
+        }
+    }
 
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if description, found := traverseAndExtractDescription(c); found {
-			return description, true
-		}
-	}
+    for c := n.FirstChild; c != nil; c = c.NextSibling {
+        if description, found := traverseAndExtractDescription(c); found {
+            return description, true
+        }
+    }
 
-	return "", false
+    return "", false
 }

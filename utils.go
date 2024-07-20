@@ -13,13 +13,11 @@ import (
 func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
     cachedValue, found, cachedErr := f.GetFromCache(url)
     if found {
-        fmt.Println("cached value found, url:", url)
         if cachedErr != nil {
             return nil, cachedErr
         }
         return cachedValue, nil
     }
-    fmt.Println("cached value not found, url:", url)
 
     timeout := time.Duration(f.props.Timeout) * time.Millisecond
     client := http.Client{
@@ -54,4 +52,25 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
 func validateURL(url string) bool {
 	_, err := Url.Parse(url)
 	return err == nil
+}
+
+func removeDuplicatesFromSlice(s []string) []string {
+    m := make(map[string]bool)
+    for _, item := range s {
+        m[item] = true
+    }
+    var result []string
+    for item := range m {
+        result = append(result, item)
+    }
+    return result
+}
+
+// extractAttributes returns a map of html attribute keys and values
+func extractAttributes(attrs []html.Attribute) map[string]string {
+    attrMap := make(map[string]string, len(attrs))
+    for _, attr := range attrs {
+        attrMap[attr.Key] = attr.Val
+    }
+    return attrMap
 }

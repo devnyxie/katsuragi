@@ -2,7 +2,6 @@ package katsuragi
 
 import (
 	"container/list"
-	"fmt"
 	"sync"
 	"time"
 
@@ -102,7 +101,6 @@ func (f *Fetcher) addToCache(url string, response *html.Node, err error) {
 }
 
 func (f *Fetcher) ClearCache() {
-    fmt.Println("Clearing cache")
     f.mu.Lock()
     defer f.mu.Unlock()
 

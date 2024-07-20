@@ -1,8 +1,16 @@
 A Go toolkit for web content processing, analysis, and SEO optimization, offering utilities to efficiently extract titles, descriptions and favicons.
 
+> [!NOTE]
+> Each method is thoroughly tested and optimized for performance, but the package is still in development and may unseen bugs. Please don't hesitate to report any issues you encounter!
+
+# Table of Contents
+
+<!-- START doctoc -->
+<!-- END doctoc -->
+
 # Features
 
-- Configurable Caching
+- LRU Caching
 - Timeout
 - User-Agent
 
@@ -13,6 +21,8 @@ go get github.com/devnyxie/katsuragi
 ```
 
 # Usage
+
+## Title
 
 ```go
 import (
@@ -33,6 +43,24 @@ func main() {
   // Get website's title
   title, err := fetcher.GeTitle("https://www.example.com")
 }
+```
+
+## Description
+
+```go
+...
+  // Get website's description
+  description, err := fetcher.GetDescription("https://www.example.com")
+...
+```
+
+## Favicons
+
+```go
+...
+  // Get website's favicons
+  favicons, err := fetcher.GetFavicons("https://www.example.com")
+...
 ```
 
 # Local Development
