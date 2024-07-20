@@ -8,4 +8,3 @@ jobs:
       - uses: technote-space/toc-generator@v4
         with:
           GITHUB_TOKEN: ${{ secrets.GH_TOC_TOKEN }}
-          TOC_TITLE: ""
