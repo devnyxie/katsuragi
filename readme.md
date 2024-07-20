@@ -1,7 +1,7 @@
 A Go toolkit for web content processing, analysis, and SEO optimization, offering utilities to efficiently extract titles, descriptions and favicons.
 
 > [!NOTE]
-> Each method is thoroughly tested and optimized for performance, but the package is still in development and may unseen bugs. Please don't hesitate to report any issues you encounter!
+> Each method is thoroughly tested and optimized for performance, but the package is still in development and may contain unseen bugs. Please don't hesitate to report any issues you encounter!
 
 # Table of Contents
 
