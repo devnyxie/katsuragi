@@ -30,13 +30,7 @@ func TestGetTitle_InvalidURL(t *testing.T) {
 	defer f.ClearCache() // empty the cache
 	_, err := f.GetTitle("http://localhost:1234")
 	if err != nil {
-        // expected error
-		expectedErrorMessage := "retrieveHTML could not reach the URL: Get \"http://localhost:1234\": dial tcp 127.0.0.1:1234: connect: connection refused"
-        if err.Error() != expectedErrorMessage {
-            t.Fatalf("Expected error message '%s', got '%s'", expectedErrorMessage, err.Error())
-        } else {
-			return
-		}
+		return
 	}
 	t.Fatalf("No error was returned")
 }

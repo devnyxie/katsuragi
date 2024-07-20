@@ -81,3 +81,7 @@ func main() {
 ```bash
 go test -v
 ```
+
+# License
+
+This project is licensed under the GNU General Public License (GPL). You can find the full text of the license [here](https://www.gnu.org/licenses/gpl-3.0.en.html).
