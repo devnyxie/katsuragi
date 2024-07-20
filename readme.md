@@ -5,8 +5,19 @@ A Go toolkit for web content processing, analysis, and SEO optimization, offerin
 
 # Table of Contents
 
-<!-- START doctoc -->
-<!-- END doctoc -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Title](#title)
+  - [Description](#description)
+  - [Favicons](#favicons)
+- [Local Development](#local-development)
+  - [Testing](#testing)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Features
 
