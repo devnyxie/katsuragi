@@ -1,3 +1,8 @@
+# katsuragi
+
+![Go Build](https://github.com/devnyxie/katsuragi/actions/workflows/go.yml/badge.svg)
+[![codecov](https://codecov.io/github/devnyxie/katsuragi/branch/main/graph/badge.svg?token=XFRMNJA858)](https://codecov.io/github/devnyxie/katsuragi)
+
 A Go toolkit for web content processing, analysis, and SEO optimization, offering utilities to efficiently extract titles, descriptions and favicons.
 
 > [!NOTE]
