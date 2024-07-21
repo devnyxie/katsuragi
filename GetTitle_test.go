@@ -1,38 +1,23 @@
 package katsuragi
 
 import (
-	"os"
 	"testing"
 )
-
-// valid URL
-func TestGetTitle_ValidURL(t *testing.T) {
-	htmlTemplate, err := os.ReadFile("testdata/template.html")
-	if err != nil {
-		t.Fatalf("Failed to read template.html: %v", err)
-	}
-	mockServer := MockServer(t, string(htmlTemplate))
-	defer mockServer.Close()
-
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-	
-	_, err = f.GetTitle(mockServer.URL)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-}
 
 // invalid URL
 func TestGetTitle_InvalidURL(t *testing.T) {
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-	_, err := f.GetTitle("http://localhost:1234")
-	if err != nil {
-		return
+	defer f.ClearCache()
+
+	htmlTemplate := ``
+	mockServer := MockServer(t, htmlTemplate)
+	defer mockServer.Close()
+
+	_, err := f.GetTitle("255.255.255.0")
+
+	if err == nil {
+		t.Fatalf("Expected an error, got none")
 	}
-	t.Fatalf("No error was returned")
 }
 
 // <title>
@@ -51,7 +36,7 @@ func TestGetTitle_TitleTag(t *testing.T) {
 	defer mockServer.Close()
 
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
+	defer f.ClearCache()
 	
 	title, err := f.GetTitle(mockServer.URL)
 
@@ -79,7 +64,7 @@ func TestGetTitle_MetaNameTitle(t *testing.T) {
 	defer mockServer.Close()
 
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
+	defer f.ClearCache()
 	
 	title, err := f.GetTitle(mockServer.URL)
 
@@ -107,7 +92,7 @@ func TestGetTitle_MetaPropertyTitle(t *testing.T) {
 	defer mockServer.Close()
 
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
+	defer f.ClearCache()
 	
 	title, err := f.GetTitle(mockServer.URL)
 
@@ -135,7 +120,7 @@ func TestGetTitle_BadHTML(t *testing.T) {
 	defer mockServer.Close()
 
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
+	defer f.ClearCache()
 	
 	_, err := f.GetTitle(mockServer.URL)
 
@@ -149,7 +134,7 @@ func TestGetTitle_BadHTML(t *testing.T) {
 	}
 }
 
-// empty title
+// empty titles
 func TestGetTitle_EmptyTitle(t *testing.T) {
 	htmlTemplate := `
 	<!DOCTYPE html>
@@ -167,7 +152,7 @@ func TestGetTitle_EmptyTitle(t *testing.T) {
 	defer mockServer.Close()
 
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
+	defer f.ClearCache()
 	
 	_, err := f.GetTitle(mockServer.URL)
 
@@ -178,5 +163,35 @@ func TestGetTitle_EmptyTitle(t *testing.T) {
 		}
 	} else {
 		t.Fatalf("No error was returned")
+	}
+}
+
+// all titles exist
+func TestGetTitle_AllTitlesExist(t *testing.T) {
+	htmlTemplate := `
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Example Title</title>
+			<meta name="title" content="Example Title">
+			<meta property="og:title" content="Example Title">
+		</head>
+		<body>
+		</body>
+	</html>
+	`
+	mockServer := MockServer(t, htmlTemplate)
+	defer mockServer.Close()
+
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	defer f.ClearCache()
+	
+	title, err := f.GetTitle(mockServer.URL)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if title != "Example Title" {
+		t.Fatalf("Expected title 'Example Title', got '%s'", title)
 	}
 }
