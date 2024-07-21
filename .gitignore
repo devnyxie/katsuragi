@@ -23,3 +23,5 @@ go.work.sum
 
 # Development environment
 .to-do
+coverage.out
+coverage.html

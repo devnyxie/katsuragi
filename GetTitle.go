@@ -6,12 +6,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// GetTitle fetches the title of a webpage given its URL
 func (f *Fetcher) GetTitle(url string) (string, error) {
-	isValid := validateURL(url)
-	if !isValid {
-		return "", fmt.Errorf("GetTitle failed to validate URL: %v", url)
-	}
     html, err := retrieveHTML(url, f)
 	if err != nil {
 		return "", err
@@ -30,6 +25,7 @@ var validTitleMeta = map[string]bool{
     "twitter:title":  true,
     "og:title":       true,
 }
+
 
 // traverseAndExtractTitle traverses the HTML node tree and extracts the title of the webpage
 func traverseAndExtractTitle(n *html.Node) (string, bool) {
