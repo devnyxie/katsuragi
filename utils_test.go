@@ -4,119 +4,157 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
-// RetrieveHTML tests
-func TestRetrieveHTML_Success(t *testing.T) {
-    html := "<html><head><title>Test</title></head><body></body></html>"
-    server := MockServer(t, html)
-    defer server.Close()
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    node, err := retrieveHTML(server.URL, f)
-    if err != nil {
-        t.Fatalf("retrieveHTML returned an error: %v", err)
+// test contains func
+func TestContains(t *testing.T) {
+    // does not contain
+    if contains([]string{"a", "b", "c"}, "d") {
+        t.Fatalf("Expected false, got true")
     }
-    if node == nil {
-        t.Fatal("retrieveHTML returned nil node")
+    // contains
+    if !contains([]string{"a", "b", "c"}, "b") {
+        t.Fatalf("Expected true, got false")
     }
 }
 
-func TestRetrieveHTML_NonHTMLContent(t *testing.T) {
-    server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/json")
-        w.Write([]byte("{}"))
-    }))
-    defer server.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    _, err := retrieveHTML(server.URL, f)
-    if err == nil {
-        t.Fatal("Expected an error for non-HTML content, got none")
-    }
-}
-
-func TestRetrieveHTML_404(t *testing.T) {
-    server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.WriteHeader(http.StatusNotFound)
-    }))
-    defer server.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    _, err := retrieveHTML(server.URL, f)
-    if err == nil {
-        t.Fatal("Expected an error for non-200 status code, got none")
-    }
-}
-
-// User Agent test
-func TestRetrieveHTML_UserAgent(t *testing.T) {
-    html := "<html><head><title>Test</title></head><body></body></html>"
-    server := MockServer(t, html)
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10, UserAgent: "test-agent"})
-    _, err := retrieveHTML(server.URL, f)
-
-    if err != nil {
-        t.Fatalf("retrieveHTML returned an error: %v", err)
-    }
-}
-
-func TestRetrieveHTML_Requests(t *testing.T) {
-    html := "<html><head><title>Test</title></head><body></body></html>"
-    server := MockServer(t, html)
-    defer server.Close()
+func TestRetrieveHTML(t *testing.T) {
+    basicMockupResponse := "<html><head><title>Test</title></head><body><h1>test</h1></body></html>"
     tests := []struct {
         name    string
         url     string
-        wantErr bool
+        fetcherProps *FetcherProps
+        mockupServerNeed bool
+        mockupServerResStatusCode int
+        mockupServerContentType string
+        mockupServerResponseBody string
+        expectedRes html.Node
+        expectedErr string
+
     }{
         {
-            name:    "Valid URL",
-            url:     server.URL,
-            wantErr: false,
+            name: "404 (Any bad status code)",
+            mockupServerNeed: true,
+            mockupServerResStatusCode: http.StatusNotFound,
+            expectedErr: "retrieveHTML failed to fetch URL. HTTP Status: 404 Not Found",
         },
         {
-            name:    "Invalid URL",
-            url:     "http://%gh&%$",
-            wantErr: true,
+            name: "Invalid URL Escape",
+            url: "http://%gh&%$",
+            mockupServerNeed: false,
+            expectedErr: "parse \"http://%gh&%$\": invalid URL escape \"%gh\"",
         },
         {
-            name:    "Empty URL",
-            url:     "",
-            wantErr: true,
+            name: "Empty URL",
+            url: "",
+            mockupServerNeed: false,
+            expectedErr: "Get \"\": unsupported protocol scheme \"\"",
         },
         {
-            name:    "Unreachable URL",
-            url:     "http://localhost:9999",
-            wantErr: true,
+            name: "Unreachable URL",
+            url: "http://localhost:9999",
+            mockupServerNeed: false,
+            expectedErr: "Get \"http://localhost:9999\": dial tcp 127.0.0.1:9999: connect: connection refused",
+        },
+        {
+            name: "User Agent",
+            url: "",
+            fetcherProps: &FetcherProps{Timeout: 3000, CacheCap: 10, UserAgent: "test-agent"},
+            mockupServerNeed: true,
+            mockupServerResStatusCode: http.StatusOK,
+            mockupServerResponseBody: basicMockupResponse,
+            mockupServerContentType: "text/html",
+            expectedRes: html.Node{
+                Type: html.ElementNode,
+                Data: "head",
+            },
+        },
+        {
+            name: "JSON",
+            url: "",
+            fetcherProps: &FetcherProps{Timeout: 3000, CacheCap: 10},
+            mockupServerNeed: true,
+            mockupServerResStatusCode: http.StatusOK,
+            mockupServerResponseBody: "{}",
+            mockupServerContentType: "application/json",
+            expectedErr: "retrieveHTML failed to fetch URL. Content-Type: application/json",
+        },
+        {
+            name: "Valid URL",
+            url: "https://www.google.com",
+            fetcherProps: &FetcherProps{Timeout: 3000, CacheCap: 10},
+            mockupServerNeed: false,
+            expectedErr: "",
+            expectedRes: html.Node{
+                Type: html.ElementNode,
+                Data: "head",
+            },
+        },
+        {
+            name: "Document without head",
+            url: "",
+            mockupServerNeed: true,
+            mockupServerResStatusCode: http.StatusOK,
+            mockupServerResponseBody: "<html><body>hi</body></html>",
+            mockupServerContentType: "text/html",
+            expectedErr: "no <head> element found",
         },
     }
 
     for _, tt := range tests {
-        // use NewFetcher and retrieveHTML
         t.Run(tt.name, func(t *testing.T) {
-            f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-            _, err := retrieveHTML(tt.url, f)
-            if tt.wantErr && err == nil {
-                t.Fatalf("Expected error, got nil")
+            var result *html.Node
+            var err error
+            var server *httptest.Server
+
+            f := NewFetcher(tt.fetcherProps)
+            defer f.ClearCache()
+
+            if tt.mockupServerNeed {
+                // server with a status, content type, and body
+                server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                    w.Header().Set("Content-Type", tt.mockupServerContentType)
+                    w.WriteHeader(tt.mockupServerResStatusCode)
+                    w.Write([]byte(tt.mockupServerResponseBody))
+                }))
+                defer server.Close()
+                result, err = retrieveHTML(server.URL, f)
+            } else {
+                result, err = retrieveHTML(tt.url, f)
             }
-            if !tt.wantErr && err != nil {
-                t.Fatalf("Expected no error, got %v", err)
+
+            // wrapping in order to avoid nil point ref
+            if err != nil {
+                // wrong error
+                errText := err.Error()
+                if tt.expectedErr != errText {
+                    t.Fatalf("Expected error %q, got %q", tt.expectedErr, errText)
+                }
+            }
+
+            // no error
+            if tt.expectedErr != "" && err == nil {
+                t.Fatalf("Expected error, got none")
+            }
+            
+            // result validation
+            // if no result was expected, return
+            if tt.expectedRes.FirstChild == nil {
+                return
+            }
+
+            // if result was expected, but is nil
+            if result == nil {
+                t.Fatalf("Expected result, got nil")
+            }
+
+            // HTML Node Result validation
+            // function returns and caches only the <head> node
+            if tt.expectedRes.Data != result.Data {
+                t.Fatalf("Expected result %q, got %q", tt.expectedRes.Data, result.Data)
             }
         })
-    
-    }
-}
-
-//return json (not mockup server, custom)
-func TestRetrieveHTML_JSON(t *testing.T) {
-    server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/json")
-        w.Write([]byte("{}"))
-    }))
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    _, err := retrieveHTML(server.URL, f)
-    if err == nil {
-        t.Fatalf("Expected an error for non-HTML content, got none")
     }
 }

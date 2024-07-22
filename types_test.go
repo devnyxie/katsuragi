@@ -2,8 +2,9 @@ package katsuragi
 
 import "testing"
 
-//NewFetcher: no props
-func TestNewFetcher(t *testing.T) {
+//NewFetcher: nil props
+func TestNewFetcher_NilProps(t *testing.T) {
+
 	f := NewFetcher(nil)
 	if f.props.Timeout != 3000000000 {
 		t.Errorf("Expected default timeout to be 3000000000, got %d", f.props.Timeout)

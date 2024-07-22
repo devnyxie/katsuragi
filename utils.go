@@ -3,7 +3,6 @@ package katsuragi
 import (
 	"fmt"
 	"net/http"
-	Url "net/url"
 	"strings"
 	"time"
 
@@ -18,14 +17,6 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
             return nil, cachedErr
         }
         return cachedValue, nil
-    }
-
-    // validate the URL
-    isValid := validateURL(url)
-    if !isValid {
-        cacheErr := fmt.Errorf("retrieveHTML failed to validate URL")
-        f.addToCache(url, nil, cacheErr)
-        return nil, cacheErr
     }
 
     timeout := time.Duration(f.props.Timeout) * time.Millisecond
@@ -80,44 +71,44 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
         return nil, cacheErr
     }
 
-    doc, err := html.Parse(httpResp.Body)
+    doc, _ := html.Parse(httpResp.Body)
+    // * Why we are not expecting an error here?
+    // Before passing the body to the "html.Parse" function, we have already checked the HTTP status code and the content type of the response.
+    // The "golang.org/x/net/html" package is very forgiving, and won't return any error even if we pass an empty string, so we can safely ignore the error here.
+    // * Why we are not using the tokinezer instead in order to avoid the auto-correction of the parser that we do not need?
+    // Tokenizing would increase the size of the code and the complexity of the implementation.
 
+    headNode, err := findHeadNode(doc)
     if err != nil {
-        cacheErr := fmt.Errorf("retrieveHTML failed to parse HTML: %v", err)
-        f.addToCache(url, nil, cacheErr)
-        return nil, cacheErr
+        return nil, err
     }
 
-    headNode := findHeadNode(doc)
-    if headNode == nil {
-        return nil, fmt.Errorf("no <head> element found")
-    }
 
     f.addToCache(url, headNode, nil)
     return headNode, nil
 }
 
-func findHeadNode(n *html.Node) *html.Node {
-    if n.Type == html.ElementNode && n.Data == "head" {
-        return n
-    }
-
-    for c := n.FirstChild; c != nil; c = c.NextSibling {
-        if headNode := findHeadNode(c); headNode != nil {
-            return headNode
+func findHeadNode(n *html.Node) (*html.Node, error) {
+    // Check if the current node is the head node
+    // 1. It should be an element node
+    // 2. The tag name should be "head"
+    // 3. It should have a parent node
+    if n.Type == html.ElementNode && n.Data == "head" && n.Parent != nil && n.Parent.Data == "html" {
+        if n.FirstChild != nil {
+            return n, nil
         }
     }
 
-    return nil
+    // Recursively search for the head node
+    for c := n.FirstChild; c != nil; c = c.NextSibling {
+        if headNode, err := findHeadNode(c); headNode != nil {
+            return headNode, err
+        }
+    }
+
+    return nil, fmt.Errorf("no <head> element found")
 }
 
-
-
-
-func validateURL(url string) bool {
-	_, err := Url.Parse(url)
-	return err == nil
-}
 
 // extractAttributes returns a map of html attribute keys and values
 func extractAttributes(attrs []html.Attribute) map[string]string {
