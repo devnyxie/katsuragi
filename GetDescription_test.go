@@ -1,193 +1,139 @@
 package katsuragi
 
 import (
-	"fmt"
 	"testing"
 )
 
-// valid URL
-func TestGetDescription_ValidURL(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-
-	description := "Example Description"
-	htmlTemplate := fmt.Sprintf(`
-	<!DOCTYPE html>
-	<html>
-		<head>
-			<meta name="description" content="%s">
-		</head>
-		<body>
-		</body>
-	</html>
-	`, description)
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	result, err := f.GetDescription(mockServer.URL)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
+func TestGetDescription(t *testing.T) {
+	tests := []struct {
+		name string
+		url string
+		mockupServerNeed bool
+		responseBody string
+		expectedErr string
+		expectedRes string
+		}{
+		{
+			name: "Invalid URL: No scheme",
+			url: "255.255.255.0",
+			mockupServerNeed: false,
+			responseBody: "",
+			expectedErr: "Get \"255.255.255.0\": unsupported protocol scheme \"\"",
+			expectedRes: "",
+		},
+		{
+			name: "Invalid URL: Empty",
+			url: "",
+			mockupServerNeed: false,
+			responseBody: "",
+			expectedErr: "Get \"\": unsupported protocol scheme \"\"",
+			expectedRes: "",
+		},
+		{
+			name: "No description tags",
+			url: "",
+			mockupServerNeed: true,
+			responseBody: `
+			<!DOCTYPE html>
+			<html>
+				<head>
+				</head>
+				<body>
+				</body>
+			</html>
+			`,
+			expectedErr: "GetDescription failed to find description in HTML",
+			expectedRes: "",
+		},
+		{
+			name: "Meta [name=description] tag",
+			url: "",
+			mockupServerNeed: true,
+			responseBody: `
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<meta name="description" content="Example Description">
+				</head>
+				<body>
+				</body>
+			</html>
+			`,
+			expectedErr: "",
+			expectedRes: "Example Description",
+		},
+		{
+			name: "Meta [property=og:description] tag",
+			url: "",
+			mockupServerNeed: true,
+			responseBody: `
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<meta property="og:description" content="Example Description">
+				</head>
+				<body>
+				</body>
+			</html>
+			`,
+			expectedErr: "",
+			expectedRes: "Example Description",
+		},
+		{
+			name: "Meta [name=twitter:description] tag",
+			url: "",
+			mockupServerNeed: true,
+			responseBody: `
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<meta name="twitter:description" content="Example Description">
+				</head>
+				<body>
+				</body>
+			</html>
+			`,
+			expectedErr: "",
+			expectedRes: "Example Description",
+		},
 	}
-	if result != description {
-		t.Fatalf("Expected description '%s', got '%s'", description, result)
-	}
-}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result string
+			var err error
 
-// invalid URL
-func TestGetDescription_InvalidURL(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
+			if tt.mockupServerNeed {
+				f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+				defer f.ClearCache()
+				mockServer := MockServer(t, tt.responseBody)
+				defer mockServer.Close()
+				result, err = f.GetDescription(mockServer.URL)
+			} else {
+				f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+				defer f.ClearCache()
+				htmlTemplate := tt.responseBody
+				mockServer := MockServer(t, htmlTemplate)
+				defer mockServer.Close()
+				result, err = f.GetDescription(tt.url)
+			}
+			
+			// error validation
+			if tt.expectedErr == "" && err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
+			if tt.expectedErr != "" && err == nil {
+				t.Fatalf("Expected error, got none")
+			}
+			if tt.expectedErr != "" && err.Error() != tt.expectedErr {
+				t.Fatalf("Expected error %q, got %q", tt.expectedErr, err.Error())
+			}
 
-	_, err := f.GetDescription("http://localhost:1234")
-	if err != nil {
-		return
-	}
-	t.Fatalf("No error was returned")
-}
-
-// empty HTML template
-func TestGetDescription_BadHTML(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-
-	htmlTemplate := `
-	<!DOCTYPE html>
-	<html>
-		<head>
-		</head>
-		<body>
-		</body>
-	</html>
-	`
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	_, err := f.GetDescription(mockServer.URL)
-
-	if err != nil {
-		expectedErrorMessage := "GetDescription failed to find description in HTML"
-		if err.Error() != expectedErrorMessage {
-			t.Fatalf("Expected error message '%s', got '%s'", expectedErrorMessage, err.Error())
-		}
-	} else {
-		t.Fatalf("No error was returned")
-	}
-}
-
-// empty description
-func TestGetDescription_EmptyDescription(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-
-	htmlTemplate := `
-	<!DOCTYPE html>
-	<html>
-		<head>
-		    <description></description>
-			<meta name="description" content="">
-			<meta property="og:description" content="">
-		</head>
-		<body>
-		</body>
-	</html>
-	`
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	_, err := f.GetDescription(mockServer.URL)
-
-	if err != nil {
-		expectedErrorMessage := "GetDescription failed to find description in HTML"
-		if err.Error() != expectedErrorMessage {
-			t.Fatalf("Expected error message '%s', got '%s'", expectedErrorMessage, err.Error())
-		}
-	} else {
-		t.Fatalf("No error was returned")
-	}
-}
-
-// <description> tag
-func TestGetDescription_DescriptionTag(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-	htmlTemplate := `
-	<!DOCTYPE html>
-	<html>
-		<head>
-			<description>Example Description</description>
-		</head>
-		<body>
-		</body>
-	</html>
-	`
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	_, err := f.GetDescription(mockServer.URL)
-
-	if err != nil {
-		expectedErrorMessage := "GetDescription failed to find description in HTML"
-		if err.Error() != expectedErrorMessage {
-			t.Fatalf("Expected error message '%s', got '%s'", expectedErrorMessage, err.Error())
-		}
-	} else {
-		t.Fatalf("No error was returned")
-	}
-}
-
-// <meta name="description" content="">
-func TestGetDescription_MetaNameDescription(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-	htmlTemplate := `
-	<!DOCTYPE html>
-	<html>
-		<head>
-			<meta name="description" content="Example Description">
-		</head>
-		<body>
-		</body>
-	</html>
-	`
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	description := "Example Description"
-	result, err := f.GetDescription(mockServer.URL)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-	if result != description {
-		t.Fatalf("Expected description '%s', got '%s'", description, result)
+			// result validation
+			if result != tt.expectedRes {
+				t.Fatalf("Expected result `%s`, got %s", tt.expectedRes, result)
+			}
+		})
 	}
 }
-
-// <meta property="og:description" content="">
-func TestGetDescription_MetaPropertyDescription(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache() // empty the cache
-	htmlTemplate := `
-	<!DOCTYPE html>
-	<html>
-		<head>
-			<meta property="og:description" content="Example Description">
-		</head>
-		<body>
-		</body>
-	</html>
-	`
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	description := "Example Description"
-	result, err := f.GetDescription(mockServer.URL)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-	if result != description {
-		t.Fatalf("Expected description '%s', got '%s'", description, result)
-	}
-}
+	

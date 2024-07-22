@@ -22,4 +22,6 @@ go.work
 go.work.sum
 
 # Development environment
-.to-do
+.to-do.md
+coverage.out
+coverage.html

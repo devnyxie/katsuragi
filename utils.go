@@ -3,7 +3,7 @@ package katsuragi
 import (
 	"fmt"
 	"net/http"
-	Url "net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/net/html"
@@ -20,15 +20,39 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
     }
 
     timeout := time.Duration(f.props.Timeout) * time.Millisecond
-    client := http.Client{
-        Timeout: timeout,
-    }
 
-    httpResp, err := client.Get(url)
+    var client *http.Client
+    
+    if f.props.UserAgent != "" {
+        // Create a custom transport with the User-Agent
+        transport := &http.Transport{
+        }
+        // Create a client with the custom transport and timeout
+        client = &http.Client{
+            Timeout: timeout,
+            Transport: &UserAgentTransport{
+                UserAgent: f.props.UserAgent,
+                Transport: transport,
+            },
+        }
+    } else {
+        // Create a standard client with just the timeout if no User-Agent is specified
+        client = &http.Client{
+            Timeout: timeout,
+        }
+    }
+    
+    // Create a new request
+    req, err := http.NewRequest("GET", url, nil)
     if err != nil {
-        cacheErr := fmt.Errorf("retrieveHTML could not reach the URL: %v", err)
-        f.addToCache(url, nil, cacheErr)
-        return nil, cacheErr
+        return nil, err
+    }
+    
+    // Make the request
+    httpResp, err := client.Do(req)
+    if err != nil {
+        // Handle error
+        return nil, err
     }
     defer httpResp.Body.Close()
 
@@ -38,33 +62,53 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
         return nil, cacheErr
     }
 
-    doc, err := html.Parse(httpResp.Body)
-    if err != nil {
-        cacheErr := fmt.Errorf("retrieveHTML failed to parse HTML: %v", err)
+    // if the content type is not text/html, return an error
+    contentType := httpResp.Header.Get("Content-Type")
+    contentType = strings.ToLower(strings.Split(contentType, ";")[0])
+    if contentType != "text/html" && contentType != "text/html; charset=utf-8" {
+        cacheErr := fmt.Errorf("retrieveHTML failed to fetch URL. Content-Type: %v", contentType)
         f.addToCache(url, nil, cacheErr)
         return nil, cacheErr
     }
 
-    f.addToCache(url, doc, nil)
-    return doc, nil
+    doc, _ := html.Parse(httpResp.Body)
+    // * Why we are not expecting an error here?
+    // Before passing the body to the "html.Parse" function, we have already checked the HTTP status code and the content type of the response.
+    // The "golang.org/x/net/html" package is very forgiving, and won't return any error even if we pass an empty string, so we can safely ignore the error here.
+    // * Why we are not using the tokinezer instead in order to avoid the auto-correction of the parser that we do not need?
+    // Tokenizing would increase the size of the code and the complexity of the implementation.
+
+    headNode, err := findHeadNode(doc)
+    if err != nil {
+        return nil, err
+    }
+
+
+    f.addToCache(url, headNode, nil)
+    return headNode, nil
 }
 
-func validateURL(url string) bool {
-	_, err := Url.Parse(url)
-	return err == nil
+func findHeadNode(n *html.Node) (*html.Node, error) {
+    // Check if the current node is the head node
+    // 1. It should be an element node
+    // 2. The tag name should be "head"
+    // 3. It should have a parent node
+    if n.Type == html.ElementNode && n.Data == "head" && n.Parent != nil && n.Parent.Data == "html" {
+        if n.FirstChild != nil {
+            return n, nil
+        }
+    }
+
+    // Recursively search for the head node
+    for c := n.FirstChild; c != nil; c = c.NextSibling {
+        if headNode, err := findHeadNode(c); headNode != nil {
+            return headNode, err
+        }
+    }
+
+    return nil, fmt.Errorf("no <head> element found")
 }
 
-func removeDuplicatesFromSlice(s []string) []string {
-    m := make(map[string]bool)
-    for _, item := range s {
-        m[item] = true
-    }
-    var result []string
-    for item := range m {
-        result = append(result, item)
-    }
-    return result
-}
 
 // extractAttributes returns a map of html attribute keys and values
 func extractAttributes(attrs []html.Attribute) map[string]string {
@@ -74,3 +118,14 @@ func extractAttributes(attrs []html.Attribute) map[string]string {
     }
     return attrMap
 }
+
+// contains checks if a string is in a slice
+func contains(slice []string, value string) bool {
+    for _, item := range slice {
+        if item == value {
+            return true
+        }
+    }
+    return false
+}
+
