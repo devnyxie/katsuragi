@@ -22,21 +22,21 @@ type Fetcher struct {
     props     FetcherProps
 }
 
-var defaultProps = FetcherProps{
+var defaultFetcherProps = FetcherProps{
     Timeout:       3000 * time.Millisecond,
     CacheCap: 10,
 }
 
 func NewFetcher(props *FetcherProps) *Fetcher {
     if props == nil {
-        props = &defaultProps
+        props = &defaultFetcherProps
     } else {
         // Set default values for unspecified fields
         if props.Timeout == 0 {
-            props.Timeout = defaultProps.Timeout
+            props.Timeout = defaultFetcherProps.Timeout
         }
         if props.CacheCap == 0 {
-            props.CacheCap = defaultProps.CacheCap
+            props.CacheCap = defaultFetcherProps.CacheCap
         }
     }
 
@@ -45,6 +45,11 @@ func NewFetcher(props *FetcherProps) *Fetcher {
         lruList: list.New(),
         props:   *props,
     }
+}
+
+type GetLinksProps struct {
+    Url      string
+    Category string
 }
 
 type cacheEntry struct {

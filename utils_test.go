@@ -92,15 +92,6 @@ func TestRetrieveHTML(t *testing.T) {
                 Data: "head",
             },
         },
-        {
-            name: "Document without head",
-            url: "",
-            mockupServerNeed: true,
-            mockupServerResStatusCode: http.StatusOK,
-            mockupServerResponseBody: "<html><body>hi</body></html>",
-            mockupServerContentType: "text/html",
-            expectedErr: "no <head> element found",
-        },
     }
 
     for _, tt := range tests {

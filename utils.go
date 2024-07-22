@@ -3,6 +3,7 @@ package katsuragi
 import (
 	"fmt"
 	"net/http"
+	Url "net/url"
 	"strings"
 	"time"
 
@@ -78,37 +79,36 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
     // * Why we are not using the tokinezer instead in order to avoid the auto-correction of the parser that we do not need?
     // Tokenizing would increase the size of the code and the complexity of the implementation.
 
-    headNode, err := findHeadNode(doc)
-    if err != nil {
-        return nil, err
-    }
+    // Remove script and style tags
+    cleanHtml(doc)
 
-
-    f.addToCache(url, headNode, nil)
-    return headNode, nil
+    f.addToCache(url, doc, nil)
+    return doc, nil
 }
 
-func findHeadNode(n *html.Node) (*html.Node, error) {
-    // Check if the current node is the head node
-    // 1. It should be an element node
-    // 2. The tag name should be "head"
-    // 3. It should have a parent node
-    if n.Type == html.ElementNode && n.Data == "head" && n.Parent != nil && n.Parent.Data == "html" {
-        if n.FirstChild != nil {
-            return n, nil
+// cleanHtml removes script and style tags from the HTML
+func cleanHtml(htmlres *html.Node) {
+    var clean func(*html.Node)
+    clean = func(n *html.Node) {
+        var prev *html.Node
+        for c := n.FirstChild; c != nil; c = c.NextSibling {
+            if c.Type == html.ElementNode && (c.Data == "script" || c.Data == "style") {
+                if prev != nil {
+                    prev.NextSibling = c.NextSibling
+                } else {
+                    n.FirstChild = c.NextSibling
+                }
+                if c.NextSibling != nil {
+                    c.NextSibling.PrevSibling = prev
+                }
+            } else {
+                prev = c
+                clean(c)
+            }
         }
     }
-
-    // Recursively search for the head node
-    for c := n.FirstChild; c != nil; c = c.NextSibling {
-        if headNode, err := findHeadNode(c); headNode != nil {
-            return headNode, err
-        }
-    }
-
-    return nil, fmt.Errorf("no <head> element found")
+    clean(htmlres)
 }
-
 
 // extractAttributes returns a map of html attribute keys and values
 func extractAttributes(attrs []html.Attribute) map[string]string {
@@ -129,3 +129,15 @@ func contains(slice []string, value string) bool {
     return false
 }
 
+
+
+func ensureAbsoluteURL(href, base_url string) string {
+    if !strings.HasPrefix(href, "http") {
+        uri, _ := Url.Parse(base_url) // Note: Error handling is ignored here, consider handling it.
+        if !strings.HasPrefix(href, "/") {
+            href = "/" + href
+        }
+        return uri.Scheme + "://" + uri.Host + href
+    }
+    return href
+}
