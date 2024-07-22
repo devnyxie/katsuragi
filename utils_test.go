@@ -54,9 +54,9 @@ func TestRetrieveHTML(t *testing.T) {
         },
         {
             name: "Unreachable URL",
-            url: "http://localhost:9999",
+            url: "http://[::1]:9999",
             mockupServerNeed: false,
-            expectedErr: "Get \"http://localhost:9999\": dial tcp 127.0.0.1:9999: connect: connection refused",
+            expectedErr: "Get \"http://[::1]:9999\": dial tcp [::1]:9999: connect: connection refused",
         },
         {
             name: "User Agent",
