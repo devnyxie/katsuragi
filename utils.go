@@ -3,7 +3,6 @@ package katsuragi
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	Url "net/url"
 	"strings"
 	"time"
@@ -147,7 +146,7 @@ func extractDomainParts(rawURL string) (*DomainParts, error) {
     dp := &DomainParts{}
 
     // Parse the URL
-    parsedURL, err := url.Parse(rawURL)
+    parsedURL, err := Url.Parse(rawURL)
     if err != nil {
         return nil, fmt.Errorf("invalid URL: %v", err)
     }
