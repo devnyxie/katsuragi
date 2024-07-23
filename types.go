@@ -52,6 +52,12 @@ type GetLinksProps struct {
     Category string
 }
 
+type DomainParts struct {
+    Subdomain string
+    Root      string
+    TLD       string
+}
+
 type cacheEntry struct {
     url      string
     response *html.Node

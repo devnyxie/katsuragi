@@ -2,8 +2,8 @@ package katsuragi
 
 import (
 	"fmt"
+	"net/http"
 	Url "net/url"
-	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -15,7 +15,11 @@ func (f *Fetcher) GetFavicons(url string) ([]string, error) {
     }
     favicons, found := traverseAndExtractFavicons(htmlDoc, url)
     if !found {
-        return nil, fmt.Errorf("GetFavicon failed to find any favicon in HTML")
+        getRootFaviconIco(&favicons, url)
+    }
+    // if not found, return error
+    if !found && len(favicons) == 0 {
+        return nil, fmt.Errorf("GetFavicon failed to find any favicons")
     }
     return favicons, nil
 }
@@ -24,9 +28,9 @@ func (f *Fetcher) GetFavicons(url string) ([]string, error) {
 var validRel = map[string]bool{
     "icon":                  true,
     "apple-touch-icon":      true,
+    "shortcut icon":         true,
 
     // to be reviewed:
-    // "shortcut icon":         true,
     // "fluid-icon":            true,
     // "mask-icon":             true,
     // "alternate icon":        true,
@@ -34,12 +38,34 @@ var validRel = map[string]bool{
 var validMeta = map[string]bool{
     "og:image":          true,
 
-    // to be implemented:
+    // to be reviewed:
     //"twitter:image:src": true, 
     //"twitter:image":     true, 
 }
 
 
+// Many websites, "https://docs.microsoft.com" for example, do not have a favicon tag in the HTML, but
+// they have a favicon.ico file in the root directory which is fetched by browsers.
+// This function tries to fetch the favicon.ico file from the root directory of the website. If the file is found,
+// it is added to the list of favicons.
+func getRootFaviconIco(existingFavicons *[]string, url string) error {
+    parsedUrl, _ := Url.Parse(url)
+    domain := parsedUrl.Scheme + "://" + parsedUrl.Host + "/favicon.ico"
+    if !contains(*existingFavicons, domain) {
+        // test: mockup server, 200 "/", 404 "/favicon.ico"
+        resp, err := http.Get(domain)
+        if err != nil {
+            return fmt.Errorf("failed to fetch favicon.ico: %w", err)
+        }
+        defer resp.Body.Close()
+        if resp.StatusCode == http.StatusOK {
+            *existingFavicons = append(*existingFavicons, domain)
+        } else {
+            fmt.Println("Favicon.ico not found:", resp.Status)
+        }
+    }
+    return nil
+}
 
 // traverseAndExtractFavicons traverses the HTML node tree and extracts favicon URLs
 func traverseAndExtractFavicons(n *html.Node, url string) ([]string, bool) {
@@ -80,13 +106,8 @@ func traverseAndExtractFavicons(n *html.Node, url string) ([]string, bool) {
     if len(favicons) > 0 {
             // If the favicon URL is a relative path, we should prepend the scheme and host of the URL
             for i, faviconURL := range favicons {
-            if !strings.HasPrefix(faviconURL, "http") {
-                uri, _ := Url.Parse(url)
-                if !strings.HasPrefix(faviconURL, "/") {
-                    faviconURL = "/" + faviconURL
-                }
-                favicons[i] = uri.Scheme + "://" + uri.Host + faviconURL
-            }
+                favicons[i] = ensureAbsoluteURL(faviconURL, url)
+
         }
         return favicons, true
     }

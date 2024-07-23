@@ -3,11 +3,13 @@ package katsuragi
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	Url "net/url"
 	"strings"
 	"time"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/publicsuffix"
 )
 
 // --- Generic utils ---
@@ -129,8 +131,7 @@ func contains(slice []string, value string) bool {
     return false
 }
 
-
-
+// to-be-deprecated
 func ensureAbsoluteURL(href, base_url string) string {
     if !strings.HasPrefix(href, "http") {
         uri, _ := Url.Parse(base_url) // Note: Error handling is ignored here, consider handling it.
@@ -141,3 +142,37 @@ func ensureAbsoluteURL(href, base_url string) string {
     }
     return href
 }
+
+func extractDomainParts(rawURL string) (*DomainParts, error) {
+    dp := &DomainParts{}
+
+    // Parse the URL
+    parsedURL, err := url.Parse(rawURL)
+    if err != nil {
+        return nil, fmt.Errorf("invalid URL: %v", err)
+    }
+
+    // Get the host
+    host := parsedURL.Hostname()
+
+    // Use the publicsuffix package to get the eTLD+1 (effective TLD plus one level)
+    domainPlusOne, err := publicsuffix.EffectiveTLDPlusOne(host)
+    if err != nil {
+        return nil, fmt.Errorf("invalid domain: %v", err)
+    }
+
+    // Extract TLD
+    tld, _ := publicsuffix.PublicSuffix(host)
+    dp.TLD = tld
+
+    // Extract root domain
+    dp.Root = strings.TrimSuffix(domainPlusOne, "."+dp.TLD)
+
+    // Extract subdomain (if any)
+    if host != domainPlusOne {
+        dp.Subdomain = strings.TrimSuffix(host, "."+domainPlusOne)
+    }
+
+    return dp, nil
+}
+

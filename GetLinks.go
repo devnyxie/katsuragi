@@ -3,89 +3,82 @@ package katsuragi
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"golang.org/x/net/html"
 )
 
+// GetLinks fetches links from the given URL based on the category ("all", "internal", "external")
 func (f *Fetcher) GetLinks(props GetLinksProps) ([]string, error) {
-
 	// Set default category to "all"
 	if props.Category == "" {
 		props.Category = "all"
 	}
 
-    htmlres, err := retrieveHTML(props.Url, f)
-    if err != nil {
-        return nil, err
-    }
+    doc, err := retrieveHTML(props.Url, f)
+	if err != nil {
+		return nil, err
+	}
 
     var links []string
+
+    baseUrl, _ := url.Parse(props.Url)
+    // *The error is ignored because the URL has been already validated in retrieveHTML.
+
     var traverse func(*html.Node)
-
-	traverse = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "a" {
-			attrMap := extractAttributes(n.Attr)
-			if href, found := attrMap["href"]; found {
-				isValid := validateUrl(href)
-				newhref := ensureAbsoluteURL(href, props.Url);
-				if props.Category == "all" {
-					
-					if !contains(links, newhref) && isValid {
-						links = append(links, newhref)
+    traverse = func(n *html.Node) {
+        if n.Type == html.ElementNode && n.Data == "a" {
+            for _, a := range n.Attr {
+                if a.Key == "href" {
+					// will be tested using bad links in html
+                    href, err := url.Parse(a.Val)
+                    if err != nil {
+                        continue
+                    }
+					// absolute href (if relative, returns the same if not)
+					resolvedUrl := baseUrl.ResolveReference(href).String()
+					// base domain
+					baseUrlParts, err := extractDomainParts(props.Url)
+					if err != nil {
+						return
 					}
-				} else if props.Category == "internal" {
-					isInternal := IsInternalURL(newhref, props.Url)
-					if isInternal && isValid {
-						if !contains(links, newhref) {
-							links = append(links, newhref)
-						}
+					// link domain
+					resolvedUrlParts, err := extractDomainParts(resolvedUrl)
+					if err != nil {
+						return
 					}
-				} else if props.Category == "external" {
-					isInternal := IsInternalURL(newhref, props.Url)
-					if !isInternal && isValid {
-						if !contains(links, newhref) {
-							links = append(links, newhref)
-						}
-					}
-				}
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			traverse(c)
-		}
+					baseUrlDomain := baseUrlParts.Root + "." + baseUrlParts.TLD
+					resolvedUrlDomain := resolvedUrlParts.Root + "." + resolvedUrlParts.TLD
 
-	}
-    traverse(htmlres)
-	if len(links) == 0 {
-		return nil, fmt.Errorf("GetLinks failed to find any links in HTML")
-	}
-    return links, nil
-}
 
-func IsInternalURL(href, urlStr string) bool {
-    // Parse the found link
-    parsedBacklink, err := url.Parse(href)
-    if err != nil {
-        return false
+					// Url.host will be different in cases like "http://example.com" and "http://www.example.com",
+					// so we need to compare the domains instead.
+
+                    switch props.Category {
+                    case "all":
+                        links = append(links, resolvedUrl)
+                    case "internal":
+                        if resolvedUrlDomain == "" || resolvedUrlDomain == baseUrlDomain {
+                            links = append(links, resolvedUrl)
+                        }
+                    case "external":
+                        if resolvedUrlDomain != "" && resolvedUrlDomain != baseUrlDomain {
+                            links = append(links, resolvedUrl)
+                        }
+                    }
+                    break
+                }
+            }
+        }
+        for c := n.FirstChild; c != nil; c = c.NextSibling {
+            traverse(c)
+        }
     }
-	// Parse the original URL
-	parsedUrl, err := url.Parse(urlStr)
-	if err != nil {
-		return false
-	}
-	// lets check if urlStr exists in href
-	if strings.Contains(href, urlStr) {
-		return true
+
+    traverse(doc)
+
+	if len(links) == 0 {
+		return nil, fmt.Errorf("GetTitle failed to find any links in HTML")
 	}
 
-    // Check if the URL is from the same domain
-    return parsedBacklink.Host == parsedUrl.Host
-}
-
-
-func validateUrl(urlStr string) bool {
-	_, err := url.ParseRequestURI(urlStr)
-	fmt.Println(err)
-	return err == nil
+    return links, nil
 }

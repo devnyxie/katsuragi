@@ -103,18 +103,14 @@ func TestGetDescription(t *testing.T) {
 			var result string
 			var err error
 
+			f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+			defer f.ClearCache()
+			mockServer := MockServer(t, tt.responseBody)
+			defer mockServer.Close()
+
 			if tt.mockupServerNeed {
-				f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-				defer f.ClearCache()
-				mockServer := MockServer(t, tt.responseBody)
-				defer mockServer.Close()
 				result, err = f.GetDescription(mockServer.URL)
 			} else {
-				f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-				defer f.ClearCache()
-				htmlTemplate := tt.responseBody
-				mockServer := MockServer(t, htmlTemplate)
-				defer mockServer.Close()
 				result, err = f.GetDescription(tt.url)
 			}
 			

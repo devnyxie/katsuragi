@@ -100,9 +100,37 @@ func TestGetLinks(t *testing.T) {
 			responseBody: func(serverURL string) string {
 				return "<html><body></body></html>"
 			},
-			expectedErr: "GetLinks failed to find any links in HTML",
+			expectedErr: "GetTitle failed to find any links in HTML",
 			expectedLinks: []string{},
 		},	
+		// unparsable links
+		{
+			name: "unparsable links",
+			category: "all",
+			responseBody: func(serverURL string) string {
+				return `<html><body>
+					<a href="http://[::1]:9999">Internal 1</a>
+					</body></html>`
+			
+			},
+			expectedErr: "GetTitle failed to find any links in HTML",
+			expectedLinks: []string{},
+		},
+		// multiple level subdomains
+		{
+			name: "multiple level subdomains",
+			category: "all",
+			responseBody: func(serverURL string) string {
+				return fmt.Sprintf(`<html><body>
+					<a href="http://sub1.%s/internal1">Internal 1</a>
+					<a href="http://sub2.%s/internal2">Internal 2</a>
+					<a href="http://external.com">External</a>
+					<a href="http://sub3.sub2.%s/internal3">Internal 3</a>
+					</body></html>`, serverURL, serverURL, serverURL)
+			},
+			expectedErr:   "",
+			expectedLinks: []string{"http://sub1.<serverURL>/internal1", "http://sub2.<serverURL>/internal2", "http://external.com", "http://sub3.sub2.<serverURL>/internal3"},
+		},
 	}
 
     for _, tt := range tests {
@@ -127,10 +155,7 @@ func TestGetLinks(t *testing.T) {
 				links, err = fetcher.GetLinks(GetLinksProps{Url: tt.url, Category: tt.category})
 			} else {
 				links, err = fetcher.GetLinks(GetLinksProps{Url: server.URL, Category: tt.category})
-			}
-
-			fmt.Println("Server URL: ", server.URL)
-       
+			}       
             // Test assertions follow
 			if err != nil && tt.expectedErr == "" {
 				t.Errorf("Expected no error, got %v", err)
@@ -149,7 +174,6 @@ func TestGetLinks(t *testing.T) {
 			}
 
 			// compare expected links with actual links
-			fmt.Println("Result: ", links)
 			if len(links) > 0 {
 				for i, link := range links {
 					if link != tt.expectedLinks[i] {
