@@ -1,156 +1,13 @@
 package katsuragi
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
-// invalid URL
-func TestGetFavicons_InvalidURL(t *testing.T) {
-	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-	defer f.ClearCache()
-
-	htmlTemplate := ``
-	mockServer := MockServer(t, htmlTemplate)
-	defer mockServer.Close()
-
-	_, err := f.GetFavicons("255.255.255.0")
-
-	if err == nil {
-		t.Fatalf("Expected an error, got none")
-	}
-}
-
-// no favicon tags
-func TestGetFavicons_NoFavicons(t *testing.T) {
-    htmlContent := `<html><head><title>No Favicons Here</title></head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    _, err := f.GetFavicons(mockServer.URL)
-	//expected error 
-	if err == nil {
-		t.Fatalf("Expected an error, got none")
-	}
-}
-
-// TestGetFavicons_MultipleFavicons tests fetching from a URL with multiple favicon links
-func TestGetFavicons_MultipleFavicons(t *testing.T) {
-    htmlContent := `<html><head>
-        <link rel="icon" href="favicon.ico" sizes="16x16">
-        <link rel="icon" href="favicon-32.png" sizes="32x32">
-        <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
-        </head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    favicons, err := f.GetFavicons(mockServer.URL)
-    if err != nil {
-        t.Fatalf("Expected no error, got: %v", err)
-    }
-    if len(favicons) != 3 {
-        t.Fatalf("Expected to find 3 favicons, found %d", len(favicons))
-    }
-}
-
-// "icon" tag
-func TestGetFavicons_IconTag(t *testing.T) {
-    htmlContent := `<html><head><link rel="icon" href="/favicon.ico"></head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    favicons, err := f.GetFavicons(mockServer.URL)
-    if err != nil {
-        t.Fatalf("Expected no error, got: %v", err)
-    }
-    if len(favicons) != 1 {
-        t.Fatalf("Expected to find 1 favicon, found %d", len(favicons))
-    }
-}
-
-// "apple-touch-icon" tag
-func TestGetFavicons_AppleTouchIconTag(t *testing.T) {
-    htmlContent := `<html><head><link rel="apple-touch-icon" href="/apple-touch-icon.png"></head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    favicons, err := f.GetFavicons(mockServer.URL)
-    if err != nil {
-        t.Fatalf("Expected no error, got: %v", err)
-    }
-    if len(favicons) != 1 {
-        t.Fatalf("Expected to find 1 favicon, found %d", len(favicons))
-    }
-}
-
-// "og:image" tag
-func TestGetFavicons_OgImageTag_NoSizeSpecified(t *testing.T) {
-    htmlContent := `<html><head><meta property="og:image" content="og-image.png"></head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    favicons, err := f.GetFavicons(mockServer.URL)
-
-    if err == nil {
-        t.Fatalf("Expected an error, got none")
-    }
-
-    if len(favicons) != 0 {
-        t.Fatalf("Expected to find 0 favicons, found %d", len(favicons))
-    }
-}
-
-// "og:image" tag with non-square aspect ratio specified
-func TestGetFavicons_OgImageTag_NonSquare(t *testing.T) {
-    htmlContent := `<html><head><meta property="og:image" content="og-image.png"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"></head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    favicons, err := f.GetFavicons(mockServer.URL)
-    if err == nil {
-        t.Fatalf("Expected an error due to non-square aspect ratio, got none")
-    }
-    if len(favicons) != 0 {
-        t.Fatalf("Expected to find 0 favicons, found %d", len(favicons))
-    }
-}
-
-// "og:image" tag with square aspect ratio specified
-func TestGetFavicons_OgImageTag_Square(t *testing.T) {
-    htmlContent := `<html><head><meta property="og:image" content="og-image.png"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="1200"></head><body></body></html>`
-    mockServer := MockServer(t, htmlContent)
-    defer mockServer.Close()
-
-    f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
-    defer f.ClearCache()
-
-    favicons, err := f.GetFavicons(mockServer.URL)
-    if err != nil {
-        t.Fatalf("Expected no error, got: %v", err)
-    }
-    if len(favicons) != 1 {
-        t.Fatalf("Expected to find 1 favicon, found %d", len(favicons))
-    }
-}
-
-// all in one
+// GetFavicon()
 func TestGetFavicons_AllInOne(t *testing.T) {
     tests := []struct {
         name            string
@@ -172,7 +29,7 @@ func TestGetFavicons_AllInOne(t *testing.T) {
             url:  "",
             mockupServerNeed: true,
             responseBody: `<html><head></head><body></body></html>`,
-            expectedErr: "no <head> element found",
+            expectedErr: "GetFavicon failed to find any favicons",
             expectedResLength: 0,
         },
         {
@@ -205,7 +62,7 @@ func TestGetFavicons_AllInOne(t *testing.T) {
             url:  "",
             mockupServerNeed: true,
             responseBody: `<html><head><meta property="og:image" content="og-image.png"></head><body></body></html>`,
-            expectedErr: "GetFavicon failed to find any favicon in HTML",
+            expectedErr: "GetFavicon failed to find any favicons",
             expectedResLength: 0,
         },
         {
@@ -213,7 +70,7 @@ func TestGetFavicons_AllInOne(t *testing.T) {
             url:  "",
             mockupServerNeed: true,
             responseBody: `<html><head><meta property="og:image" content="og-image.png"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"></head><body></body></html>`,
-            expectedErr: "GetFavicon failed to find any favicon in HTML",
+            expectedErr: "GetFavicon failed to find any favicons",
             expectedResLength: 0,
         },
         {
@@ -256,6 +113,86 @@ func TestGetFavicons_AllInOne(t *testing.T) {
 
             if len(favicons) > 0 && test.expectedResLength == 0 {
                 t.Fatalf("Expected no favicons, found %d", len(favicons))
+            }
+        })
+    }
+}
+
+func TestGetRootFaviconIco(t *testing.T) {
+    tests := []struct {
+        name           string
+        serverResponse int
+        expectedErr    string
+        expectedLength int
+        badURL         bool
+    }{
+        {
+            name:           "Favicon Found",
+            serverResponse: http.StatusOK,
+            expectedErr:    "",
+            expectedLength: 1,
+            badURL:         false,
+        },
+        {
+            name:           "Favicon Not Found",
+            serverResponse: http.StatusNotFound,
+            expectedErr:    "failed to fetch favicon.ico: favicon not found",
+            expectedLength: 0,
+            badURL:         false,
+        },
+        {
+            name:           "Bad URL",
+            serverResponse: http.StatusOK,
+            expectedErr:    "failed to fetch favicon.ico: invalid url",
+            expectedLength: 0,
+            badURL:         true,
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            var serverURL string
+            if test.badURL {
+                serverURL = "http://invalid-url"
+            } else {
+                // Create a mock server
+                server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                    if r.URL.Path == "/favicon.ico" {
+                        w.WriteHeader(test.serverResponse)
+                    } else {
+                        w.WriteHeader(http.StatusOK)
+                    }
+                }))
+                defer server.Close()
+
+                // Parse the server URL
+                parsedURL, err := url.Parse(server.URL)
+                if err != nil {
+                    t.Fatalf("Failed to parse server URL: %v", err)
+                }
+                serverURL = parsedURL.String()
+            }
+
+            // Call getRootFaviconIco
+            var favicons []string
+            err := getRootFaviconIco(&favicons, serverURL)
+
+            // Verify the results
+            if err != nil {
+                if test.expectedErr == "" {
+                    t.Fatalf("Expected no error, got: %v", err)
+                }
+                if err.Error() != test.expectedErr {
+                    t.Fatalf("Expected error: %s, got: %v", test.expectedErr, err)
+                }
+            } else {
+                if test.expectedErr != "" {
+                    t.Fatalf("Expected error: %s, got none", test.expectedErr)
+                }
+            }
+
+            if len(favicons) != test.expectedLength {
+                t.Fatalf("Expected %d favicons, found %d", test.expectedLength, len(favicons))
             }
         })
     }

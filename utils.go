@@ -3,10 +3,12 @@ package katsuragi
 import (
 	"fmt"
 	"net/http"
+	Url "net/url"
 	"strings"
 	"time"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/publicsuffix"
 )
 
 // --- Generic utils ---
@@ -78,37 +80,36 @@ func retrieveHTML(url string, f *Fetcher) (*html.Node, error) {
     // * Why we are not using the tokinezer instead in order to avoid the auto-correction of the parser that we do not need?
     // Tokenizing would increase the size of the code and the complexity of the implementation.
 
-    headNode, err := findHeadNode(doc)
-    if err != nil {
-        return nil, err
-    }
+    // Remove script and style tags
+    cleanHtml(doc)
 
-
-    f.addToCache(url, headNode, nil)
-    return headNode, nil
+    f.addToCache(url, doc, nil)
+    return doc, nil
 }
 
-func findHeadNode(n *html.Node) (*html.Node, error) {
-    // Check if the current node is the head node
-    // 1. It should be an element node
-    // 2. The tag name should be "head"
-    // 3. It should have a parent node
-    if n.Type == html.ElementNode && n.Data == "head" && n.Parent != nil && n.Parent.Data == "html" {
-        if n.FirstChild != nil {
-            return n, nil
+// cleanHtml removes script and style tags from the HTML
+func cleanHtml(htmlres *html.Node) {
+    var clean func(*html.Node)
+    clean = func(n *html.Node) {
+        var prev *html.Node
+        for c := n.FirstChild; c != nil; c = c.NextSibling {
+            if c.Type == html.ElementNode && (c.Data == "script" || c.Data == "style") {
+                if prev != nil {
+                    prev.NextSibling = c.NextSibling
+                } else {
+                    n.FirstChild = c.NextSibling
+                }
+                if c.NextSibling != nil {
+                    c.NextSibling.PrevSibling = prev
+                }
+            } else {
+                prev = c
+                clean(c)
+            }
         }
     }
-
-    // Recursively search for the head node
-    for c := n.FirstChild; c != nil; c = c.NextSibling {
-        if headNode, err := findHeadNode(c); headNode != nil {
-            return headNode, err
-        }
-    }
-
-    return nil, fmt.Errorf("no <head> element found")
+    clean(htmlres)
 }
-
 
 // extractAttributes returns a map of html attribute keys and values
 func extractAttributes(attrs []html.Attribute) map[string]string {
@@ -127,5 +128,62 @@ func contains(slice []string, value string) bool {
         }
     }
     return false
+}
+
+func ensureAbsoluteURL(href, baseURL string) string {
+    // Handle data URLs
+    if strings.HasPrefix(href, "data:") {
+        return href
+    }
+    // Parse the base URL
+    baseUri, err := Url.Parse(baseURL)
+    if err != nil {
+        return href
+    }
+    // Parse the href
+    uri, err := Url.Parse(href)
+    if err != nil {
+        return href
+    }
+    // If the href is already absolute, return it
+    if uri.IsAbs() {
+        return href
+    }
+    // Resolve the relative URL against the base URL
+    return baseUri.ResolveReference(uri).String()
+}
+
+
+func extractDomainParts(rawURL string) (*DomainParts, error) {
+    dp := &DomainParts{}
+
+    // Parse the URL
+    parsedURL, err := Url.Parse(rawURL)
+    if err != nil {
+        return nil, fmt.Errorf("invalid URL: %v", err)
+    }
+
+    // Get the host
+    host := parsedURL.Hostname()
+
+    // Use the publicsuffix package to get the eTLD+1 (effective TLD plus one level)
+    domainPlusOne, err := publicsuffix.EffectiveTLDPlusOne(host)
+    if err != nil {
+        return nil, fmt.Errorf("invalid domain: %v", err)
+    }
+
+    // Extract TLD
+    tld, _ := publicsuffix.PublicSuffix(host)
+    dp.TLD = tld
+
+    // Extract root domain
+    dp.Root = strings.TrimSuffix(domainPlusOne, "."+dp.TLD)
+
+    // Extract subdomain (if any)
+    if host != domainPlusOne {
+        dp.Subdomain = strings.TrimSuffix(host, "."+domainPlusOne)
+    }
+
+    return dp, nil
 }
 

@@ -18,6 +18,7 @@ A Go toolkit for web content processing, analysis, and SEO optimization, offerin
   - [Title](#title)
   - [Description](#description)
   - [Favicons](#favicons)
+  - [Links/Backlinks](#linksbacklinks)
 - [Local Development](#local-development)
   - [Testing](#testing)
   - [Code Coverage](#code-coverage)
@@ -98,6 +99,24 @@ The GetFavicons() function currently supports the following favicon meta tags:
   favicons, err := fetcher.GetFavicons("https://www.example.com")
   // [https://www.example.com/favicon.ico, https://www.example.com/favicon.png]
 ...
+```
+
+## Links/Backlinks
+
+The GetLinks() function searches for all `<a>` tags in the HTML document and returns a slice of links.
+
+Options:
+
+- `Url` (required): The URL of the website to fetch.
+- `Category` (optional): The category of links to fetch. Possible values are `internal`, `external`, and `all`. Default is `all`.
+
+```go
+  // Get website's links
+  links, err := fetcher.GetLinks(GetLinksProps{
+    Url: "https://www.example.com",
+    Category: "external",
+  })
+  // [https://www.youtube.com/example, https://www.facebook.com/example]
 ```
 
 # Local Development
