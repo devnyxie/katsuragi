@@ -130,17 +130,29 @@ func contains(slice []string, value string) bool {
     return false
 }
 
-// to-be-deprecated
-func ensureAbsoluteURL(href, base_url string) string {
-    if !strings.HasPrefix(href, "http") {
-        uri, _ := Url.Parse(base_url) // Note: Error handling is ignored here, consider handling it.
-        if !strings.HasPrefix(href, "/") {
-            href = "/" + href
-        }
-        return uri.Scheme + "://" + uri.Host + href
+func ensureAbsoluteURL(href, baseURL string) string {
+    // Handle data URLs
+    if strings.HasPrefix(href, "data:") {
+        return href
     }
-    return href
+    // Parse the base URL
+    baseUri, err := Url.Parse(baseURL)
+    if err != nil {
+        return href
+    }
+    // Parse the href
+    uri, err := Url.Parse(href)
+    if err != nil {
+        return href
+    }
+    // If the href is already absolute, return it
+    if uri.IsAbs() {
+        return href
+    }
+    // Resolve the relative URL against the base URL
+    return baseUri.ResolveReference(uri).String()
 }
+
 
 func extractDomainParts(rawURL string) (*DomainParts, error) {
     dp := &DomainParts{}

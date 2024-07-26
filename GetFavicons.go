@@ -82,6 +82,7 @@ func traverseAndExtractFavicons(n *html.Node, url string) ([]string, bool) {
 
                 }
             }
+        // og:image + aspect ratio check
         } else if n.Data == "meta" {
             if property, found := attrMap["property"]; found && validMeta[property] {
                 if property == "og:image" {
