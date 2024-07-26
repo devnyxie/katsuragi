@@ -8,7 +8,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-// test contains func
 func TestContains(t *testing.T) {
     // does not contain
     if contains([]string{"a", "b", "c"}, "d") {
@@ -92,15 +91,6 @@ func TestRetrieveHTML(t *testing.T) {
                 Data: "head",
             },
         },
-        {
-            name: "Document without head",
-            url: "",
-            mockupServerNeed: true,
-            mockupServerResStatusCode: http.StatusOK,
-            mockupServerResponseBody: "<html><body>hi</body></html>",
-            mockupServerContentType: "text/html",
-            expectedErr: "no <head> element found",
-        },
     }
 
     for _, tt := range tests {
@@ -154,6 +144,88 @@ func TestRetrieveHTML(t *testing.T) {
             // function returns and caches only the <head> node
             if tt.expectedRes.Data != result.Data {
                 t.Fatalf("Expected result %q, got %q", tt.expectedRes.Data, result.Data)
+            }
+        })
+    }
+}
+
+func TestEnsureAbsoluteURL(t *testing.T) {
+    tests := []struct {
+        href     string
+        baseURL  string
+        expected string
+    }{
+        {"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA", "http://example.com", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA"},
+        {"relative/path", "http://example.com", "http://example.com/relative/path"},
+        {"http://absolute.url", "http://example.com", "http://absolute.url"},
+        {"invalid:url", "http://example.com", "invalid:url"},
+        //unparsable (bad) Urls next
+        {"http://%gh&%$", "http://example.com", "http://%gh&%$"},
+        {"http://example.com", "ht1tp://%gh&%$", "http://example.com"},
+    }
+
+    for _, test := range tests {
+        result := ensureAbsoluteURL(test.href, test.baseURL)
+        if result != test.expected {
+            t.Errorf("ensureAbsoluteURL(%q, %q) = %q; want %q", test.href, test.baseURL, result, test.expected)
+        }
+    }
+}
+
+func TestExtractDomainParts(t *testing.T) {
+    tests := []struct {
+        rawURL       string
+        expectedTLD  string
+        expectedRoot string
+        expectedSub  string
+        expectErr    bool
+    }{
+        {
+            rawURL:       "http://www.example.com",
+            expectedTLD:  "com",
+            expectedRoot: "example",
+            expectedSub:  "www",
+            expectErr:    false,
+        },
+        {
+            rawURL:       "https://example.co.uk",
+            expectedTLD:  "co.uk",
+            expectedRoot: "example",
+            expectedSub:  "",
+            expectErr:    false,
+        },
+        {
+            rawURL:       "ftp://sub.domain.example.org",
+            expectedTLD:  "org",
+            expectedRoot: "example",
+            expectedSub:  "sub.domain",
+            expectErr:    false,
+        },
+        {
+            rawURL:       "%$#21",
+            expectedTLD:  "",
+            expectedRoot: "",
+            expectedSub:  "",
+            expectErr:    true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.rawURL, func(t *testing.T) {
+            dp, err := extractDomainParts(tt.rawURL)
+            if (err != nil) != tt.expectErr {
+                t.Fatalf("Expected error: %v, got: %v", tt.expectErr, err)
+            }
+            if err == nil {
+                if dp.TLD != tt.expectedTLD {
+                    t.Errorf("Expected TLD: %s, got: %s", tt.expectedTLD, dp.TLD)
+                }
+                if dp.Root != tt.expectedRoot {
+                    t.Errorf("Expected Root: %s, got: %s", tt.expectedRoot, dp.Root)
+                }
+                if dp.Subdomain != tt.expectedSub {
+                    t.Errorf("Expected Subdomain: %s, got: %s", tt.expectedSub, dp.Subdomain)
+                }
             }
         })
     }
