@@ -55,13 +55,13 @@ func getRootFaviconIco(existingFavicons *[]string, url string) error {
         // test: mockup server, 200 "/", 404 "/favicon.ico"
         resp, err := http.Get(domain)
         if err != nil {
-            return fmt.Errorf("failed to fetch favicon.ico: %w", err)
+            return fmt.Errorf("failed to fetch favicon.ico: invalid url")
         }
         defer resp.Body.Close()
         if resp.StatusCode == http.StatusOK {
             *existingFavicons = append(*existingFavicons, domain)
         } else {
-            fmt.Println("Favicon.ico not found:", resp.Status)
+            return fmt.Errorf("failed to fetch favicon.ico: favicon not found")
         }
     }
     return nil

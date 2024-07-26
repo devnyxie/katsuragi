@@ -37,10 +37,8 @@ func (f *Fetcher) GetLinks(props GetLinksProps) ([]string, error) {
 					// absolute href (if relative, returns the same if not)
 					resolvedUrl := baseUrl.ResolveReference(href).String()
 					// base domain
-					baseUrlParts, err := extractDomainParts(props.Url)
-					if err != nil {
-						return
-					}
+					baseUrlParts, _ := extractDomainParts(props.Url)
+					// *The error is ignored because the URL has been already validated in retrieveHTML.
 					// link domain
 					resolvedUrlParts, err := extractDomainParts(resolvedUrl)
 					if err != nil {
