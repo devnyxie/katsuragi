@@ -65,7 +65,7 @@ func main() {
   defer fetcher.ClearCache()
 
   // Get website's title
-  title, err := fetcher.GeTitle("https://www.example.com")
+  title, err := fetcher.GetTitle("https://www.example.com")
 }
 ```
 
