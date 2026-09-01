@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>Lazy Images Fixture</title></head>
+<body>
+  <div style="height: 3000px;">spacer</div>
+  <img data-src="/pixel.png" width="10" height="10" class="lazy">
+  <img data-src="/pixel.png" width="10" height="10" class="lazy">
+  <img data-src="/pixel.png" width="10" height="10" class="lazy">
+  <script>
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var img = entry.target;
+          img.src = img.dataset.src;
+          observer.unobserve(img);
+        }
+      });
+    });
+    document.querySelectorAll('img.lazy').forEach(function (img) {
+      observer.observe(img);
+    });
+  </script>
+</body>
+</html>

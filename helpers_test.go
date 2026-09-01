@@ -12,10 +12,10 @@ func MockServer(t *testing.T, htmlTemplate string) *httptest.Server {
 		if r.URL.Path == "/" {
 			w.Header().Set("Content-Type", "text/html")
 			html := []byte(htmlTemplate)
-			w.Write(html)
+			_, _ = w.Write(html)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Not Found"))
+			_, _ = w.Write([]byte("Not Found"))
 		}
 	}))
 

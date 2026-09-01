@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><title>Network Idle Fixture</title></head>
+<body>
+  <div id="status">loading</div>
+  <script>
+    setTimeout(function () {
+      fetch('/slow-resource').then(function () {
+        document.getElementById('status').textContent = 'settled';
+      });
+    }, 200);
+  </script>
+</body>
+</html>

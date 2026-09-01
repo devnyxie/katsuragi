@@ -18,11 +18,46 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
-          cache-dependency-path: cachedDependencies/go.sum
+          go-version: "1.26"
+          cache-dependency-path: go.sum
       - name: Install dependencies
         run: go get .
+      - name: Vet
+        run: go vet ./...
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
       - name: Build
         run: go build -v ./...
       - name: Test
-        run: go test -v ./...
+        run: go test -v -race ./...
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: go.sum
+
+      - name: Install Chromium
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb x11-xkb-utils xauth
+
+      - name: Vet (integration)
+        run: go vet -tags=integration ./...
+      - name: Lint (integration)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --build-tags=integration
+      - name: Integration tests
+        run: go test -v -race -tags=integration ./...

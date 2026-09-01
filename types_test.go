@@ -2,7 +2,7 @@ package katsuragi
 
 import "testing"
 
-//NewFetcher: nil props
+// NewFetcher: nil props
 func TestNewFetcher_NilProps(t *testing.T) {
 
 	f := NewFetcher(nil)
@@ -14,7 +14,7 @@ func TestNewFetcher_NilProps(t *testing.T) {
 	}
 }
 
-//NewFetcher: with zero props
+// NewFetcher: with zero props
 func TestNewFetcher_ZeroProps(t *testing.T) {
 	f := NewFetcher(&FetcherProps{Timeout: 0, CacheCap: 0})
 	if f.props.Timeout != 3000000000 {

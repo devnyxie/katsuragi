@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>Hanging Fixture</title></head>
+<body>
+  <div id="status">loading</div>
+  <script>
+    // This request never resolves (server holds the connection open
+    // forever), simulating a page that never reaches network idle.
+    fetch('/never-responds');
+  </script>
+</body>
+</html>

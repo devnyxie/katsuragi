@@ -1,6 +1,7 @@
 package katsuragi
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,16 +10,16 @@ import (
 )
 
 func TestGetLinks(t *testing.T) {
-    tests := []struct {
-        name              string
-		category 		  string
-		url 			  string
-        responseBody      func(serverURL string) string // Function to generate response body dynamically
-        expectedErr       string
-        expectedLinks     []string
-    }{
+	tests := []struct {
+		name          string
+		category      string
+		url           string
+		responseBody  func(serverURL string) string // Function to generate response body dynamically
+		expectedErr   string
+		expectedLinks []string
+	}{
 		{
-			name: "all",
+			name:     "all",
 			category: "all",
 			responseBody: func(serverURL string) string {
 				return fmt.Sprintf(`<html><body>
@@ -30,20 +31,20 @@ func TestGetLinks(t *testing.T) {
 			expectedErr:   "",
 			expectedLinks: []string{"<serverURL>/internal1", "<serverURL>/internal2", "http://external.com"},
 		},
-        {
-            name: "internal",
+		{
+			name:     "internal",
 			category: "internal",
-            responseBody: func(serverURL string) string {
-                return fmt.Sprintf(`<html><body>
+			responseBody: func(serverURL string) string {
+				return fmt.Sprintf(`<html><body>
                     <a href="%s/internal1">Internal 1</a>
                     <a href="%s/internal2">Internal 2</a>
                     </body></html>`, serverURL, serverURL)
-            },
-            expectedErr:   "",
-            expectedLinks: []string{"<serverURL>/internal1", "<serverURL>/internal2"},
-        },
+			},
+			expectedErr:   "",
+			expectedLinks: []string{"<serverURL>/internal1", "<serverURL>/internal2"},
+		},
 		{
-			name: "external",
+			name:     "external",
 			category: "external",
 			responseBody: func(serverURL string) string {
 				return fmt.Sprintf(`<html><body>
@@ -55,7 +56,7 @@ func TestGetLinks(t *testing.T) {
 			expectedLinks: []string{"http://external.com"},
 		},
 		{
-			name: "no category",
+			name:     "no category",
 			category: "",
 			responseBody: func(serverURL string) string {
 				return fmt.Sprintf(`<html><body>
@@ -69,18 +70,18 @@ func TestGetLinks(t *testing.T) {
 		},
 		// bad url
 		{
-			name: "bad url",
+			name:     "bad url",
 			category: "all",
-			url: "http:/",
+			url:      "http:/",
 			responseBody: func(serverURL string) string {
 				return ""
 			},
-			expectedErr: "Get \"http:/\": http: no Host in request URL",
+			expectedErr:   "Get \"http:/\": http: no Host in request URL",
 			expectedLinks: []string{},
 		},
 		// broken link in html
 		{
-			name: "good and invalid links in html",
+			name:     "good and invalid links in html",
 			category: "all",
 			responseBody: func(serverURL string) string {
 				return fmt.Sprintf(`<html><body>
@@ -95,30 +96,30 @@ func TestGetLinks(t *testing.T) {
 		},
 		// no links in html
 		{
-			name: "no links in html",
+			name:     "no links in html",
 			category: "all",
 			responseBody: func(serverURL string) string {
 				return "<html><body></body></html>"
 			},
-			expectedErr: "GetTitle failed to find any links in HTML",
+			expectedErr:   "GetLinks failed to find any links in HTML",
 			expectedLinks: []string{},
-		},	
+		},
 		// unparsable links
 		{
-			name: "unparsable links",
+			name:     "unparsable links",
 			category: "all",
 			responseBody: func(serverURL string) string {
 				return `<html><body>
 					<a href="http://[::1]:9999">Internal 1</a>
 					</body></html>`
-			
+
 			},
-			expectedErr: "GetTitle failed to find any links in HTML",
+			expectedErr:   "GetLinks failed to find any links in HTML",
 			expectedLinks: []string{},
 		},
 		// multiple level subdomains
 		{
-			name: "multiple level subdomains",
+			name:     "multiple level subdomains",
 			category: "all",
 			responseBody: func(serverURL string) string {
 				return fmt.Sprintf(`<html><body>
@@ -133,30 +134,30 @@ func TestGetLinks(t *testing.T) {
 		},
 	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			var server *httptest.Server
-            server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                fmt.Fprint(w, tt.responseBody(server.URL))
-            }))
-            defer server.Close()
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, tt.responseBody(server.URL))
+			}))
+			defer server.Close()
 
 			// Replace "<serverURL>" in expectedLinks with the actual server.URL before assertions
 			for i, link := range tt.expectedLinks {
-                tt.expectedLinks[i] = strings.Replace(link, "<serverURL>", server.URL, -1)
-            }
+				tt.expectedLinks[i] = strings.ReplaceAll(link, "<serverURL>", server.URL)
+			}
 
-            fetcher := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+			fetcher := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
 
 			var links []string
 			var err error
 
 			if tt.url != "" {
-				links, err = fetcher.GetLinks(GetLinksProps{Url: tt.url, Category: tt.category})
+				links, err = fetcher.GetLinks(context.Background(), GetLinksProps{Url: tt.url, Category: tt.category})
 			} else {
-				links, err = fetcher.GetLinks(GetLinksProps{Url: server.URL, Category: tt.category})
-			}       
-            // Test assertions follow
+				links, err = fetcher.GetLinks(context.Background(), GetLinksProps{Url: server.URL, Category: tt.category})
+			}
+			// Test assertions follow
 			if err != nil && tt.expectedErr == "" {
 				t.Errorf("Expected no error, got %v", err)
 			}
@@ -182,7 +183,6 @@ func TestGetLinks(t *testing.T) {
 				}
 			}
 
-        })
-    }
+		})
+	}
 }
-
