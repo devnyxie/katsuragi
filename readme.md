@@ -16,6 +16,7 @@ A Go toolkit for web content processing, analysis, and SEO optimization, offerin
   - [Title](#title)
   - [Description](#description)
   - [Favicons](#favicons)
+  - [Favicon by Brand](#favicon-by-brand)
   - [Links/Backlinks](#linksbacklinks)
   - [Screenshots](#screenshots)
     - [Avoiding bot detection](#avoiding-bot-detection)
@@ -39,6 +40,7 @@ A Go toolkit for web content processing, analysis, and SEO optimization, offerin
 - Headless-browser screenshots via a warm, reusable Chrome pool (`browser`/`screenshot` packages), with layered wait-for-load strategies for pages that are slow or dynamic to render
 - Anti-bot stealth, proxy support, and CAPTCHA solving for the browser pool
 - An importable HTTP API (`server` package) exposing extraction and screenshots over REST, plus a ready-to-run binary (`cmd/server`)
+- Resolve a bare brand name (e.g. "allegro") to a favicon, with no URL needed, via `GetFaviconByBrand`
 
 # Repository Layout
 
@@ -123,6 +125,43 @@ The GetFavicons() function currently supports the following favicon meta tags:
   favicons, err := fetcher.GetFavicons(context.Background(), "https://www.example.com")
   // [https://www.example.com/favicon.ico, https://www.example.com/favicon.png]
 ...
+```
+
+## Favicon by Brand
+
+The `GetFaviconByBrand()` function resolves a bare brand name (e.g. `"allegro"`) to a favicon, with no URL required. It races two independent domain-resolution strategies concurrently, and cross-checks both against actual page content (title/body text contains the brand name) before trusting either, to reject parked domains and irrelevant results:
+
+- **Guessing**: tries `brand.com`, plus `brand.<Hint>` if a `Hint` (country/TLD) is given.
+- **Search**: queries a pluggable `SearchProvider` (defaults to a dependency-free DuckDuckGo HTML-results scraper — no API key required) and verifies its top results the same way.
+
+Whichever strategy verifies first wins; the search result is authoritative and overrides a pending or already-verified guess if they disagree. If neither strategy produces a verified match, an error is returned — notably, a real site whose homepage is a JS-rendered SPA with no server-side brand text will fail verification, since this is a static-HTML fetch with no browser rendering (for that case, see [Screenshots](#screenshots) for real-browser rendering instead).
+
+```go
+...
+  // Get a favicon by brand name alone
+  favicons, err := fetcher.GetFaviconByBrand(context.Background(), katsuragi.GetFaviconByBrandProps{
+    Brand: "allegro",
+    Hint:  "pl", // optional country/TLD hint
+  })
+  // [https://allegro.pl/favicon.ico, ...]
+...
+```
+
+Resolved domains are cached in `FetcherProps.BrandCache` (default: process-local in-memory LRU, 24h TTL) so repeat lookups for the same brand skip resolution entirely. That default cache is process-local and won't be shared across a horizontally-scaled deployment's instances — implement the two-method `BrandCache` interface against your own store (Redis, Memcached, ...) and pass it via `FetcherProps.BrandCache` to share resolutions across instances:
+
+```go
+type BrandCache interface {
+    Get(key string) (domain string, ok bool)
+    Set(key, domain string)
+}
+```
+
+`FetcherProps.SearchProvider` is similarly swappable — the default DuckDuckGo scraper hits an undocumented HTML endpoint (no official API, no key), so it's inherently fragile to markup changes and to rate-limiting/blocking based on request volume. Implement the one-method `SearchProvider` interface against a paid search API (Bing, Google Custom Search, SerpAPI, ...) or your own brand→domain lookup if you need something more robust:
+
+```go
+type SearchProvider interface {
+    Search(ctx context.Context, query string) ([]string, error)
+}
 ```
 
 ## Links/Backlinks

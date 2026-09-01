@@ -43,6 +43,35 @@ type FetcherProps struct {
 	DescriptionMeta map[string]bool
 	FaviconRel      map[string]bool
 	FaviconMeta     map[string]bool
+
+	// SearchProvider is used by GetFaviconByBrand's search branch to
+	// resolve a brand name to candidate domains. Defaults to a
+	// dependency-free DuckDuckGo HTML-results scraper (duckduckgo.go)
+	// when nil.
+	SearchProvider SearchProvider
+
+	// BrandCache caches brand(+hint) -> resolved-domain lookups made by
+	// GetFaviconByBrand. Deliberately separate from the *html.Node cache
+	// above, which is keyed by URL and shaped for parsed pages, not
+	// domain strings. Defaults to a process-local in-memory LRU+TTL
+	// (InMemoryBrandCache) when nil; supply your own (Redis, Memcached,
+	// ...) for multi-process deployments.
+	BrandCache BrandCache
+
+	// BrandGuessTimeout and BrandSearchTimeout bound GetFaviconByBrand's
+	// two concurrent resolution branches so a slow one can't block
+	// indefinitely. Default to 2s / 4s respectively when zero.
+	BrandGuessTimeout  time.Duration
+	BrandSearchTimeout time.Duration
+
+	// GuessDomains returns the candidate domain URLs GetFaviconByBrand's
+	// guess branch verifies, in priority order, given an already-
+	// sanitized brand (lowercase, [a-z0-9-] only) and hint. Defaults to
+	// ["https://<brand>.com"] (+ ["https://<brand>.<hint>"] if hint !=
+	// ""). Overridable so tests can point guesses at a mock server, and
+	// so callers can customize the guess strategy (extra TLDs, an
+	// allow-list, ...).
+	GuessDomains func(brand, hint string) []string
 }
 
 type Fetcher struct {
@@ -59,6 +88,8 @@ var defaultFetcherProps = FetcherProps{
 }
 
 const defaultRetryBackoff = 200 * time.Millisecond
+const defaultBrandGuessTimeout = 2 * time.Second
+const defaultBrandSearchTimeout = 4 * time.Second
 
 func NewFetcher(props *FetcherProps) *Fetcher {
 	p := defaultFetcherProps
@@ -90,6 +121,21 @@ func NewFetcher(props *FetcherProps) *Fetcher {
 	if p.FaviconMeta == nil {
 		p.FaviconMeta = validMeta
 	}
+	if p.SearchProvider == nil {
+		p.SearchProvider = &DuckDuckGoSearchProvider{}
+	}
+	if p.BrandCache == nil {
+		p.BrandCache = &InMemoryBrandCache{}
+	}
+	if p.BrandGuessTimeout == 0 {
+		p.BrandGuessTimeout = defaultBrandGuessTimeout
+	}
+	if p.BrandSearchTimeout == 0 {
+		p.BrandSearchTimeout = defaultBrandSearchTimeout
+	}
+	if p.GuessDomains == nil {
+		p.GuessDomains = defaultGuessDomains
+	}
 
 	return &Fetcher{
 		cache:   make(map[string]*list.Element),
@@ -107,6 +153,7 @@ type ContentFetcher interface {
 	GetDescription(ctx context.Context, url string) (string, error)
 	GetFavicons(ctx context.Context, url string) ([]string, error)
 	GetLinks(ctx context.Context, props GetLinksProps) ([]string, error)
+	GetFaviconByBrand(ctx context.Context, props GetFaviconByBrandProps) ([]string, error)
 }
 
 var _ ContentFetcher = (*Fetcher)(nil)
@@ -114,6 +161,22 @@ var _ ContentFetcher = (*Fetcher)(nil)
 type GetLinksProps struct {
 	Url      string
 	Category string
+}
+
+// GetFaviconByBrandProps are the parameters for GetFaviconByBrand.
+type GetFaviconByBrandProps struct {
+	// Brand is the bare brand name to resolve, e.g. "allegro". Required.
+	Brand string
+	// Hint is an optional TLD/country hint (e.g. "pl") tried alongside
+	// the default ".com" domain guess. Leave empty for no hint.
+	Hint string
+}
+
+// SearchProvider resolves a free-text query to candidate result URLs,
+// best-first. Used by GetFaviconByBrand's search branch; see
+// DuckDuckGoSearchProvider (duckduckgo.go) for the default implementation.
+type SearchProvider interface {
+	Search(ctx context.Context, query string) ([]string, error)
 }
 
 type DomainParts struct {
