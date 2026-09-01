@@ -45,12 +45,18 @@ func fetchAndParse(ctx context.Context, url string, f *Fetcher) (*html.Node, err
 		return nil, err
 	}
 
-	doc, _ := html.Parse(bytes.NewReader(body))
-	// * Why we are not expecting an error here?
-	// Before parsing, we have already checked the HTTP status code and the content type of the response.
-	// The "golang.org/x/net/html" package is very forgiving, and won't return any error even if we pass an empty string, so we can safely ignore the error here.
-	// * Why we are not using the tokinezer instead in order to avoid the auto-correction of the parser that we do not need?
-	// Tokenizing would increase the size of the code and the complexity of the implementation.
+	doc, err := html.Parse(bytes.NewReader(body))
+	// html.Parse is forgiving of malformed markup (won't error on garbled
+	// or empty input), but it does reject pathologically deep documents
+	// (an open-element stack past a fixed node limit) as a resource-
+	// exhaustion guard, returning a nil doc with a non-nil error in that
+	// case - that has to be handled, not ignored, since cleanHtml (and
+	// every extraction function) assumes a non-nil root.
+	if err != nil {
+		err = fmt.Errorf("failed to parse HTML: %w", err)
+		f.addToCache(url, nil, err)
+		return nil, err
+	}
 
 	// Remove script and style tags
 	cleanHtml(doc)

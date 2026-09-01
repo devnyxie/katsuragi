@@ -2,10 +2,12 @@ module github.com/devnyxie/katsuragi
 
 go 1.26
 
+toolchain go1.26.6
+
 require (
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f
 	github.com/chromedp/chromedp v0.16.0
-	golang.org/x/net v0.27.0
+	golang.org/x/net v0.58.0
 	golang.org/x/sync v0.7.0
 )
 

@@ -25,6 +25,22 @@ func (f *Fetcher) GetLinks(ctx context.Context, props GetLinksProps) ([]string, 
 	baseUrl, _ := url.Parse(props.Url)
 	// *The error is ignored because the URL has been already validated in retrieveHTML.
 
+	// domainOf reduces a URL to its "Root.TLD" string, or "" if it can't be
+	// determined - which happens for perfectly well-formed URLs too, e.g.
+	// an IP-literal or "localhost" host has no eTLD+1. "" is a value the
+	// switch below already has dedicated handling for (treated as "no
+	// known domain to compare against"), so a failure here degrades
+	// gracefully into that instead of dropping the link or panicking on a
+	// nil result.
+	domainOf := func(u string) string {
+		parts, err := extractDomainParts(u)
+		if err != nil {
+			return ""
+		}
+		return parts.Root + "." + parts.TLD
+	}
+	baseUrlDomain := domainOf(props.Url)
+
 	var traverse func(*html.Node)
 	traverse = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "a" {
@@ -37,16 +53,7 @@ func (f *Fetcher) GetLinks(ctx context.Context, props GetLinksProps) ([]string, 
 					}
 					// absolute href (if relative, returns the same if not)
 					resolvedUrl := baseUrl.ResolveReference(href).String()
-					// base domain
-					baseUrlParts, _ := extractDomainParts(props.Url)
-					// *The error is ignored because the URL has been already validated in retrieveHTML.
-					// link domain
-					resolvedUrlParts, err := extractDomainParts(resolvedUrl)
-					if err != nil {
-						return
-					}
-					baseUrlDomain := baseUrlParts.Root + "." + baseUrlParts.TLD
-					resolvedUrlDomain := resolvedUrlParts.Root + "." + resolvedUrlParts.TLD
+					resolvedUrlDomain := domainOf(resolvedUrl)
 
 					// Url.host will be different in cases like "http://example.com" and "http://www.example.com",
 					// so we need to compare the domains instead.

@@ -65,10 +65,9 @@ func TestRetrieveHTML_Redirect(t *testing.T) {
 	}
 }
 
-// TestCleanHtml_DeeplyNested guards against stack overflow/hangs when
-// cleanHtml recurses through a pathologically deep or huge document.
-func TestCleanHtml_DeeplyNested(t *testing.T) {
-	const depth = 5000
+// deeplyNestedHTML builds an HTML document depth levels of <div> deep,
+// wrapping a <script> tag, for exercising cleanHtml/html.Parse at depth.
+func deeplyNestedHTML(depth int) string {
 	var b strings.Builder
 	b.WriteString("<html><head><title>Deep</title></head><body>")
 	for i := 0; i < depth; i++ {
@@ -79,12 +78,23 @@ func TestCleanHtml_DeeplyNested(t *testing.T) {
 		b.WriteString("</div>")
 	}
 	b.WriteString("</body></html>")
+	return b.String()
+}
 
+func serveHTML(t *testing.T, body string) *httptest.Server {
+	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		_, _ = w.Write([]byte(b.String()))
+		_, _ = w.Write([]byte(body))
 	}))
-	defer server.Close()
+	t.Cleanup(server.Close)
+	return server
+}
+
+// TestCleanHtml_DeeplyNested guards against stack overflow/hangs when
+// cleanHtml recurses through a deep but acceptable document.
+func TestCleanHtml_DeeplyNested(t *testing.T) {
+	server := serveHTML(t, deeplyNestedHTML(400))
 
 	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
 	title, err := f.GetTitle(context.Background(), server.URL)
@@ -93,6 +103,19 @@ func TestCleanHtml_DeeplyNested(t *testing.T) {
 	}
 	if title != "Deep" {
 		t.Fatalf("expected title %q, got %q", "Deep", title)
+	}
+}
+
+// TestCleanHtml_PathologicallyDeep verifies that a document too deep for
+// html.Parse's own resource-exhaustion guard (a fixed open-element-stack
+// limit) surfaces as a clean error, rather than panicking on the nil
+// *html.Node that guard returns.
+func TestCleanHtml_PathologicallyDeep(t *testing.T) {
+	server := serveHTML(t, deeplyNestedHTML(5000))
+
+	f := NewFetcher(&FetcherProps{Timeout: 3000, CacheCap: 10})
+	if _, err := f.GetTitle(context.Background(), server.URL); err == nil {
+		t.Fatalf("expected an error for a pathologically deep document, got none")
 	}
 }
 

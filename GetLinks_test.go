@@ -104,9 +104,12 @@ func TestGetLinks(t *testing.T) {
 			expectedErr:   "GetLinks failed to find any links in HTML",
 			expectedLinks: []string{},
 		},
-		// unparsable links
+		// a link with no derivable eTLD+1 (an IP-literal host) is still a
+		// well-formed link and belongs in "all" - it just can't be
+		// classified as internal/external by domain, which the
+		// "internal"/"external" category tests below cover.
 		{
-			name:     "unparsable links",
+			name:     "IP-literal link",
 			category: "all",
 			responseBody: func(serverURL string) string {
 				return `<html><body>
@@ -114,8 +117,8 @@ func TestGetLinks(t *testing.T) {
 					</body></html>`
 
 			},
-			expectedErr:   "GetLinks failed to find any links in HTML",
-			expectedLinks: []string{},
+			expectedErr:   "",
+			expectedLinks: []string{"http://[::1]:9999"},
 		},
 		// multiple level subdomains
 		{
