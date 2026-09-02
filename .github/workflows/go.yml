@@ -25,7 +25,7 @@ jobs:
       - name: Vet
         run: go vet ./...
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
       - name: Build
@@ -55,9 +55,9 @@ jobs:
       - name: Vet (integration)
         run: go vet -tags=integration ./...
       - name: Lint (integration)
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           args: --build-tags=integration
       - name: Integration tests
-        run: go test -v -race -tags=integration ./...
+        run: go test -v -race -tags=integration -p 1 ./...

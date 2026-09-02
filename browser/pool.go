@@ -86,7 +86,7 @@ func (c *PoolConfig) setDefaults() {
 		c.MaxTabsPerBrowser = 5
 	}
 	if c.LaunchTimeout <= 0 {
-		c.LaunchTimeout = 20 * time.Second
+		c.LaunchTimeout = 45 * time.Second
 	}
 	if c.HealthCheckInterval <= 0 {
 		c.HealthCheckInterval = 30 * time.Second
